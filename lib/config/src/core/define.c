@@ -20,6 +20,8 @@
 #define DEF_SIZE_LIST                                                                  \
     (offsetof(cf_def, list_default_count) + sizeof(((cf_def*)0)->list_default_count))
 #define DEF_SIZE_UNIT (offsetof(cf_def, unit) + sizeof(((cf_def*)0)->unit))
+#define DEF_SIZE_MIGRATE                                                               \
+    (offsetof(cf_def, migrate_user) + sizeof(((cf_def*)0)->migrate_user))
 
 struct cf_list_projection {
     cf_def                     count;
@@ -198,6 +200,13 @@ static cf_bool def_check(const cf_def* d, cf_error* err) {
             "'%s': flags 0x%x are not definition flags this library "
             "knows; a source flag such as CF_OPTIONAL belongs on the source",
             d->key, d->flags & ~(unsigned)CF_DEF_FLAGS);
+    }
+    if (d->migrate != NULL &&
+        ((d->flags & CF_DEPRECATED) == 0 || d->replaced_by == NULL ||
+         d->list_mode != CF_LIST_NONE)) {
+        return cf_error_set(
+            err, CF_E_DEFINITION, d->key, NULL,
+            "'%s': migrate needs CF_DEPRECATED, replaced_by and a scalar key", d->key);
     }
     if (d->replaced_by != NULL) {
         size_t rlen = strlen(d->replaced_by);
@@ -389,6 +398,8 @@ static cf_bool defset_project_list(cf_defset* ds, const cf_def* d, size_t klen) 
     cf_value_null(&p->item.default_value);
     p->item.aliases            = NULL;
     p->item.replaced_by        = NULL;
+    p->item.migrate            = NULL;
+    p->item.migrate_user       = NULL;
     p->item.list_mode          = CF_LIST_NONE;
     p->item.list_separator     = 0;
     p->item.list_defaults      = NULL;
@@ -429,6 +440,10 @@ cf_bool cf_define(cf_defset* ds, const cf_def* d, cf_error* err) {
     }
     if (d->size < DEF_SIZE_UNIT) {
         normalized.unit = NULL;
+    }
+    if (d->size < DEF_SIZE_MIGRATE) {
+        normalized.migrate      = NULL;
+        normalized.migrate_user = NULL;
     }
     d = &normalized;
     if (!def_check(d, err)) {

@@ -58,6 +58,7 @@ cf_ks_original_key
 cf_ks_reject
 cf_ks_rename
 cf_ks_rename_list
+cf_ks_rename_with
 cf_ks_replay
 cf_ks_reselect
 cf_ks_resolve

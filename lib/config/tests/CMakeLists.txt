@@ -64,6 +64,7 @@ set(CF_UNIT_TESTS
     test_preferences
     test_interpolate
     test_rename
+    test_migrate
     test_null
     test_edges
     test_codec_edges

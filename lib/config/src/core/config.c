@@ -1383,6 +1383,92 @@ static cf_config* create_failed(cf_builder* b, cf_error* err, const cf_error* wh
     return NULL;
 }
 
+/* Whether a text has "${" in it. */
+static cf_bool cf_memmem_ref(const char* p, size_t n) {
+    size_t i;
+    for (i = 0; i + 1 < n; ++i) {
+        if (p[i] == '$' && p[i + 1] == '{') {
+            return CF_TRUE;
+        }
+    }
+    return CF_FALSE;
+}
+
+/* What the rename pass's hook needs to migrate a value (D-122). */
+typedef struct migrate_ctx {
+    const cf_def* old;
+    const cf_def* repl; /* the new key's definition, or NULL */
+    cf_arena*     arena;
+    cf_error*     err;
+} migrate_ctx;
+
+/* Run on each candidate of a deprecated key as the rename copies it: the
+   old key's function turns the value into the new key's, so precedence then
+   chooses among values all in the new key's unit. */
+static int migrate_hook(void* ctx, cf_candidate* c) {
+    migrate_ctx*  m   = (migrate_ctx*)ctx;
+    const cf_def* old = m->old;
+    const cf_def* nw  = m->repl;
+    cf_value      in, out;
+    char          why[CF_MESSAGE_MAX];
+
+    memset(&in, 0, sizeof in);
+    /* References are read later, in the apply pass, which flags a template
+       then; what somebody wrote and has a "${" in it is one already. */
+    if ((c->flags & CF_CAND_TEMPLATE) != 0 ||
+        ((c->flags & CF_CAND_AUTHORED) != 0 && c->value.type == CF_TYPE_TEXT &&
+         c->value.u.t.n > 1 && cf_memmem_ref(c->value.u.t.p, c->value.u.t.n))) {
+        cf_error_set(m->err, CF_E_VALIDATE, old->key, c->at,
+                     "%s: a value that holds a reference cannot be migrated", old->key);
+        return CF_KS_CONV_FAIL;
+    }
+    if ((c->flags & CF_CAND_TEXTUAL) != 0) {
+        if (!cf_value_from_text(old->type, c->value.u.t.p, c->value.u.t.n, &in)) {
+            return CF_KS_CONV_SKIP;
+        }
+    } else if (c->value.type != old->type) {
+        return CF_KS_CONV_SKIP;
+    } else {
+        in = c->value;
+    }
+    memset(&out, 0, sizeof out);
+    cf_value_null(&out);
+    why[0] = 0;
+    if (!old->migrate(&in, &out, old->migrate_user, why, sizeof why)) {
+        why[sizeof why - 1] = 0;
+        if ((old->flags & CF_SENSITIVE) != 0 ||
+            (nw != NULL && (nw->flags & CF_SENSITIVE) != 0)) {
+            cf_error_set(m->err, CF_E_VALIDATE, old->key, c->at,
+                         "%s: the migration to %s failed", old->key, old->replaced_by);
+        } else {
+            cf_error_set(m->err, CF_E_VALIDATE, old->key, c->at,
+                         "%s: the migration to %s failed: %s", old->key,
+                         old->replaced_by, why);
+        }
+        return CF_KS_CONV_FAIL;
+    }
+    if (nw != NULL && out.type != nw->type) {
+        cf_error_set(m->err, CF_E_VALIDATE, old->key, c->at,
+                     "%s: the migration to %s produced %s where %s was declared",
+                     old->key, old->replaced_by, cf_type_name(out.type),
+                     cf_type_name(nw->type));
+        return CF_KS_CONV_FAIL;
+    }
+    if (out.type == CF_TYPE_TEXT) {
+        char* copy = cf_arena_dup(m->arena, out.u.t.p, out.u.t.n);
+        if (copy == NULL) {
+            cf_error_set(m->err, CF_E_MEMORY, old->key, c->at,
+                         "no room to migrate '%s'", old->key);
+            return CF_KS_CONV_FAIL;
+        }
+        out.u.t.p = copy;
+    }
+    c->value = out;
+    c->flags &= ~(unsigned)CF_CAND_TEXTUAL;
+    c->written = NULL;
+    return CF_KS_CONV_OK;
+}
+
 cf_config* cf_builder_create(cf_builder* b, cf_error* err) {
     cf_error   e = CF_ERROR_INIT;
     cf_config* c;
@@ -1621,11 +1707,26 @@ cf_config* cf_builder_create(cf_builder* b, cf_error* err) {
         if ((d->flags & CF_DEPRECATED) == 0 || d->replaced_by == NULL) {
             continue;
         }
-        renamed = d->list_mode != CF_LIST_NONE
-                      ? cf_ks_rename_list(&c->keys, d->key, strlen(d->key),
-                                          d->replaced_by, strlen(d->replaced_by))
-                      : cf_ks_rename(&c->keys, d->key, strlen(d->key), d->replaced_by,
-                                     strlen(d->replaced_by));
+        if (d->migrate != NULL) {
+            migrate_ctx m;
+            cf_error    me = CF_ERROR_INIT;
+            m.old          = d;
+            m.repl  = cf_defset_find(&c->defs, d->replaced_by, strlen(d->replaced_by));
+            m.arena = c->arena;
+            m.err   = &me;
+            renamed =
+                cf_ks_rename_with(&c->keys, d->key, strlen(d->key), d->replaced_by,
+                                  strlen(d->replaced_by), migrate_hook, &m);
+            if (!renamed && me.code != CF_OK) {
+                return create_failed(b, err, &me, &me);
+            }
+        } else if (d->list_mode != CF_LIST_NONE) {
+            renamed = cf_ks_rename_list(&c->keys, d->key, strlen(d->key),
+                                        d->replaced_by, strlen(d->replaced_by));
+        } else {
+            renamed = cf_ks_rename(&c->keys, d->key, strlen(d->key), d->replaced_by,
+                                   strlen(d->replaced_by));
+        }
         if (!renamed) {
             cf_error_set(&e, CF_E_MEMORY, d->key, NULL, "no room to rename '%s'",
                          d->key);

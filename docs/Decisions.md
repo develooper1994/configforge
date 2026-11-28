@@ -127,6 +127,7 @@ gets reopened every six months.
 | D-112 | The MISRA record is plain text of file and count, three kinds, and the gate fails open nowhere | compliance, CI | **Decided** |
 | D-113 | A unit on an int definition: `cf_def.unit`, an open `cf_unit`, and the text read in the unit's base | definitions, `cf_numeric.h`, the contract | **Decided** |
 | D-121 | A read that finds no definition, or another type, is recorded and reported | configuration, diagnostics | **Decided** |
+| D-122 | A migration is a function on the deprecated key's definition, run on each value as it is copied | definitions, migration | **Decided** |
 | D-222 | A unit is an open value: a name, a parser, a formatter and its own options; a program defines its own | `cf_numeric.h`, `cf_def.unit` | **Decided** |
 | D-230 | Options with defaults are one convention: `size` first, `_init`, NULL the defaults; a fixed limit a public call reaches is an option with its old value as default | public options structs, `gate.options` | **Decided** |
 | D-231 | The platform is a part: `none` is built and tried; what it cannot give answers `CF_E_CAPABILITY` | platform, build options, CI | **Decided** |
@@ -5286,6 +5287,32 @@ leaving every program to join `cf_emit` to it; a default of `CF_SYNC_PLATFORM`
 for the replace.
 
 **Status.** Built: F-1a (the layer); F-1b (`cf_emit_file`).
+
+## D-122 — A migration is a function on the deprecated key's definition, run on each value as it is copied
+
+**Question.** `replaced_by` moves a value to a new name and converts
+nothing. A file written for version 1 says `timeout_s = 30` and the key now
+counts milliseconds. Where does the conversion live, and when does it run?
+
+**Options.**
+
+1. On the new key's definition. Rejected: a key renamed twice across
+   versions has one conversion for each old name.
+2. On the old key's definition, run on the winning value after resolution.
+   Rejected: only the winner would be converted, and a lower source's value
+   would reach the new key in the wrong unit.
+3. On the old key's definition, run on every value of the old key as the
+   rename copies it, before precedence chooses (decided).
+
+**Decision.** Option 3. `cf_def.migrate` and `migrate_user`, for a
+deprecated scalar key with `replaced_by`; `in` is the value as the old key
+declares it, `out` the new key's type, a failure a reason. The copy's place
+says `(from <old>, converted)`. A refusal fails the build with the old key
+and the line, and never shows a sensitive value. A value that holds a
+reference is refused, not passed on unconverted.
+
+**Consequence.** `cf_def` grows by two members (D-51). Splitting one key
+in two is not covered; it is the maintainer's to ask for.
 
 ## D-127 — A file is replaced whole or not at all
 

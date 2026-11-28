@@ -202,6 +202,25 @@ by ordinary precedence across sources - and `explain()` places it
 `app.ini:2:1 (as db.host)`, the line somebody has to update. Doctor's
 CFD009 names it too. `examples/c/migration.c`, and its C++ twin.
 
+A key that changes its unit carries the conversion on its old definition:
+
+```c
+cf_def_init(&old, CF_TYPE_INT, "database.timeout_s");
+old.flags       = CF_DEPRECATED;
+old.replaced_by = "database.timeout_ms";
+old.migrate     = seconds_to_ms; /* cf_migrate_fn: in, out, user, why, cap */
+cf_builder_define(b, &old);
+```
+
+The function runs on each value written under the old name, before
+precedence chooses, so a value from any source reaches the new key in its
+unit, and `explain()` says `(from database.timeout_s, converted)`. It sets
+`out` to a value of the new key's type or writes a reason and returns false,
+which fails the build with the old key and the line (never the value of a
+sensitive key). It must be pure and cheap: it runs again at every create and
+every derive. A value that holds a `${reference}` is refused, not passed on
+unconverted. Splitting one key into two is not covered.
+
 A prefix you cannot know in advance - a plugin's settings - is exempted
 from unknown-key rejection with `cf_builder_open(b, "plugins")`. A builder
 holds eight such prefixes unless `cf_builder_limits` (a `cf_limit_options`

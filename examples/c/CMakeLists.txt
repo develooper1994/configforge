@@ -254,7 +254,10 @@ if(CF_WITH_INI)
     "1. a file written for version 1"
     "connecting to db1.internal:5432"
     "app.ini:2:1 .as db.host."
-    "connecting to db2.internal:5432")
+    "connecting to db2.internal:5432"
+    "3. a value in the old unit"
+    "timeout of 30000 ms"
+    "from database.timeout_s, converted")
 endif()
 
 # A device's binary settings, read through a TLV layout the program gives

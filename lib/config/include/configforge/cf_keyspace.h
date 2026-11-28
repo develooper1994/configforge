@@ -307,6 +307,21 @@ CF_NODISCARD CF_API cf_bool cf_ks_rename(cf_keyspace* ks, const char* from,
 CF_NODISCARD CF_API cf_bool cf_ks_rename_list(cf_keyspace* ks, const char* from,
                                               size_t fromlen, const char* to,
                                               size_t tolen);
+
+/* A hook run on each copy cf_ks_rename_with makes, before it is pushed. It
+   may change the copy's value and flags. */
+#define CF_KS_CONV_OK 1    /* `c` was converted                       */
+#define CF_KS_CONV_SKIP 0  /* leave this candidate out of the new key */
+#define CF_KS_CONV_FAIL -1 /* stop: the hook holds the error          */
+typedef int (*cf_ks_convert_fn)(void* ctx, cf_candidate* c);
+
+/* As cf_ks_rename, with `conv` (or NULL) called on each copy; a converted
+   copy's place says "(from <old>, converted)". False on no room and on a FAIL
+   of the hook, which the caller tells apart by the error it set in `ctx`. */
+CF_NODISCARD CF_API cf_bool cf_ks_rename_with(cf_keyspace* ks, const char* from,
+                                              size_t fromlen, const char* to,
+                                              size_t tolen, cf_ks_convert_fn conv,
+                                              void* ctx);
 #endif /* CF_INTERNAL_API */
 
 /* Record a copy of another key space's candidate, at its rank, with what

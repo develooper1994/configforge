@@ -363,7 +363,8 @@ static cf_bool cf_ks_remember_original(cf_keyspace* ks, size_t index, const char
 }
 
 static cf_bool cf_ks_rename_impl(cf_keyspace* ks, const char* from, size_t fromlen,
-                                 const char* to, size_t tolen, cf_bool members) {
+                                 const char* to, size_t tolen, cf_bool members,
+                                 cf_ks_convert_fn conv, void* ctx) {
     size_t i, n;
 
     if (ks == NULL || ks->resolved || ks->cands == NULL ||
@@ -380,6 +381,9 @@ static cf_bool cf_ks_rename_impl(cf_keyspace* ks, const char* from, size_t froml
         const char*  original     = ks->cands[i].key;
         size_t       original_len = ks->cands[i].keylen;
         size_t       target_len;
+        cf_bool      converted;
+        const char*  how;
+        const char*  tail;
 
         if (original_len < fromlen || memcmp(original, from, fromlen) != 0 ||
             (original_len != fromlen && (!members || original[fromlen] != '.')) ||
@@ -399,15 +403,28 @@ static cf_bool cf_ks_rename_impl(cf_keyspace* ks, const char* from, size_t froml
         }
         cf_fmt(target, target_len + 1, "%S%S", to, tolen, original + fromlen,
                original_len - fromlen);
-        c   = ks->cands[i].cand; /* a copy: pushing may move the array */
-        len = cf_fmt(NULL, 0, "%s%s(as %S)", (c.at != NULL) ? c.at : "",
-                     (c.at != NULL) ? " " : "", original, original_len);
-        at  = (char*)cf_arena_alloc(ks->arena, len + 1);
+        c         = ks->cands[i].cand; /* a copy: pushing may move the array */
+        converted = CF_FALSE;
+        if (conv != NULL) {
+            int verdict = conv(ctx, &c);
+            if (verdict == CF_KS_CONV_FAIL) {
+                return CF_FALSE;
+            }
+            if (verdict == CF_KS_CONV_SKIP) {
+                continue;
+            }
+            converted = CF_TRUE;
+        }
+        how  = converted ? "from" : "as";
+        tail = converted ? ", converted" : "";
+        len  = cf_fmt(NULL, 0, "%s%s(%s %S%s)", (c.at != NULL) ? c.at : "",
+                      (c.at != NULL) ? " " : "", how, original, original_len, tail);
+        at   = (char*)cf_arena_alloc(ks->arena, len + 1);
         if (at == NULL) {
             return CF_FALSE;
         }
-        cf_fmt(at, len + 1, "%s%s(as %S)", (c.at != NULL) ? c.at : "",
-               (c.at != NULL) ? " " : "", original, original_len);
+        cf_fmt(at, len + 1, "%s%s(%s %S%s)", (c.at != NULL) ? c.at : "",
+               (c.at != NULL) ? " " : "", how, original, original_len, tail);
         if (!cf_ks_push(ks, target, target_len, c.source, &c.value, at, c.outcome,
                         c.reason, c.flags | CF_CAND_RENAMED)) {
             return CF_FALSE;
@@ -422,12 +439,18 @@ static cf_bool cf_ks_rename_impl(cf_keyspace* ks, const char* from, size_t froml
 
 cf_bool cf_ks_rename(cf_keyspace* ks, const char* from, size_t fromlen, const char* to,
                      size_t tolen) {
-    return cf_ks_rename_impl(ks, from, fromlen, to, tolen, CF_FALSE);
+    return cf_ks_rename_impl(ks, from, fromlen, to, tolen, CF_FALSE, NULL, NULL);
+}
+
+cf_bool cf_ks_rename_with(cf_keyspace* ks, const char* from, size_t fromlen,
+                          const char* to, size_t tolen, cf_ks_convert_fn conv,
+                          void* ctx) {
+    return cf_ks_rename_impl(ks, from, fromlen, to, tolen, CF_FALSE, conv, ctx);
 }
 
 cf_bool cf_ks_rename_list(cf_keyspace* ks, const char* from, size_t fromlen,
                           const char* to, size_t tolen) {
-    return cf_ks_rename_impl(ks, from, fromlen, to, tolen, CF_TRUE);
+    return cf_ks_rename_impl(ks, from, fromlen, to, tolen, CF_TRUE, NULL, NULL);
 }
 
 cf_bool cf_ks_add_candidate(cf_keyspace* ks, const char* key, size_t keylen,

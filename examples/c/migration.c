@@ -12,6 +12,8 @@
  * by ordinary precedence across sources - and explain() says where it
  * was written and under which name, which is the line a person needs
  * to update the file. Doctor's CFD009 names the same place in CI.
+ * A key can also change its unit: the old key's definition carries a
+ * function, and explain() says the value was converted.
  *
  *     ./migration
  *
@@ -24,6 +26,16 @@
 
 #define FILE_NAME "app.ini"
 
+/* Version 1 counted seconds; the key now counts milliseconds. */
+static cf_bool seconds_to_ms(const cf_value* in, cf_value* out, void* user, char* why,
+                             size_t cap) {
+    (void)user;
+    (void)why;
+    (void)cap;
+    cf_value_int(out, in->u.i * 1000);
+    return CF_TRUE;
+}
+
 static cf_config* load(cf_error* err) {
     cf_builder* b = cf_build(NULL);
     cf_def      old;
@@ -34,6 +46,12 @@ static cf_config* load(cf_error* err) {
     cf_def_init(&old, CF_TYPE_TEXT, "db.host");
     old.flags       = CF_DEPRECATED;
     old.replaced_by = "database.host";
+    cf_builder_define(b, &old);
+    cf_builder_int(b, "database.timeout_ms", 5000, 1, 3600000, 0);
+    cf_def_init(&old, CF_TYPE_INT, "database.timeout_s");
+    old.flags       = CF_DEPRECATED;
+    old.replaced_by = "database.timeout_ms";
+    old.migrate     = seconds_to_ms;
     cf_builder_define(b, &old);
     cf_builder_unknown(b, CF_UNKNOWN_REJECT);
     return cf_builder_create(b, err);
@@ -60,6 +78,10 @@ static void run(const char* title, const char* text) {
     cf_explain(cfg, "database.host", why, sizeof why);
     fputs(why, stdout);
     fputs("\n", stdout);
+    printf("  timeout of %d ms\n", (int)cf_get_int(cfg, "database.timeout_ms", 0));
+    cf_explain(cfg, "database.timeout_ms", why, sizeof why);
+    fputs(why, stdout);
+    fputs("\n", stdout);
     cf_config_free(cfg);
 }
 
@@ -67,6 +89,7 @@ int main(void) {
     run("1. a file written for version 1", "[db]\nhost = db1.internal\n");
     run("2. a file half updated: the new spelling wins",
         "[database]\nhost = db2.internal\n[db]\nhost = db1.internal\n");
+    run("3. a value in the old unit", "[database]\ntimeout_s = 30\n");
     remove(FILE_NAME);
     return 0;
 }

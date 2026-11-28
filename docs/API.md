@@ -96,7 +96,7 @@ Document refusals also carry a reason and, where known, a line and column.
 - [`cf_flatten.h`](#cf_flattenh) - 10
 - [`cf_image.h`](#cf_imageh) - 10
 - [`cf_iterate.h`](#cf_iterateh) - 5
-- [`cf_keyspace.h`](#cf_keyspaceh) - 36
+- [`cf_keyspace.h`](#cf_keyspaceh) - 37
 - [`cf_live.h`](#cf_liveh) - 18
 - [`cf_lock.h`](#cf_lockh) - 2
 - [`cf_log.h`](#cf_logh) - 1
@@ -147,7 +147,7 @@ cf_builder_response_files.
 CF_NODISCARD CF_API cf_config* cf_app(const char* name, int argc, char* const* argv, cf_error* err);
 ```
 
-Implementation: [`cf_app` (lib/config/src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/config.c#L1711).
+Implementation: [`cf_app` (lib/config/src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/config.c#L1812).
 
 Guarantee: strong. Nothing of the caller's changes; NULL, with `err` set, when no
 configuration can be made.
@@ -691,7 +691,7 @@ Guarantee: strong. A query; `o` is not written when it returns CF_FALSE.
 CF_NODISCARD CF_API cf_config* cf_builder_create(cf_builder* b, cf_error* err);
 ```
 
-Implementation: [`cf_builder_create` (lib/config/src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/config.c#L1386).
+Implementation: [`cf_builder_create` (lib/config/src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/config.c#L1472).
 
 Guarantee: strong. The configuration is made apart and published at the end. The
 builder is consumed whether this succeeds or fails, and the failure is in `err`; no
@@ -713,7 +713,7 @@ CF_API cf_i64 cf_get_int(const cf_config* c, const char* key, cf_i64 fallback);
 CF_API const char* cf_get_text(const cf_config* c, const char* key, const char* fallback);
 ```
 
-Implementation: [`cf_get_bool` (lib/config/src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/config.c#L2406), [`cf_get_int` (lib/config/src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/config.c#L2411), [`cf_get_text` (lib/config/src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/config.c#L2416).
+Implementation: [`cf_get_bool` (lib/config/src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/config.c#L2507), [`cf_get_int` (lib/config/src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/config.c#L2512), [`cf_get_text` (lib/config/src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/config.c#L2517).
 
 Guarantee: nothrow. The fallback for an absent key or another type.
 Thread: safe.
@@ -724,7 +724,7 @@ Alloc: none.
 CF_API double cf_get_real(const cf_config* c, const char* key, double fallback);
 ```
 
-Implementation: [`cf_get_real` (lib/config/src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/config.c#L2438).
+Implementation: [`cf_get_real` (lib/config/src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/config.c#L2539).
 
 Guarantee: nothrow. The fallback for an absent key or another type.
 Thread: safe.
@@ -735,7 +735,7 @@ Alloc: none.
 CF_API const char* cf_get_text_n(const cf_config* c, const char* key, size_t* len, const char* fallback);
 ```
 
-Implementation: [`cf_get_text_n` (lib/config/src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/config.c#L2421).
+Implementation: [`cf_get_text_n` (lib/config/src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/config.c#L2522).
 
 Pointer and length, for text that may contain anything. The stored
 value is NUL-terminated as well, so cf_get_text stays free.
@@ -750,7 +750,7 @@ CF_NODISCARD CF_API cf_code cf_try_int(const cf_config* c, const char* key, cf_i
 CF_NODISCARD CF_API cf_code cf_try_text(const cf_config* c, const char* key, const char** out, size_t* len);
 ```
 
-Implementation: [`cf_try_bool` (lib/config/src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/config.c#L2458), [`cf_try_int` (lib/config/src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/config.c#L2467), [`cf_try_text` (lib/config/src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/config.c#L2476).
+Implementation: [`cf_try_bool` (lib/config/src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/config.c#L2559), [`cf_try_int` (lib/config/src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/config.c#L2568), [`cf_try_text` (lib/config/src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/config.c#L2577).
 
 CF_OK, CF_E_KEY when absent, CF_E_CONVERT on a type mismatch.
 Guarantee: strong. A read; the configuration is untouched and `out` is unspecified
@@ -763,7 +763,7 @@ Alloc: none.
 CF_NODISCARD CF_API cf_code cf_try_real(const cf_config* c, const char* key, double* out);
 ```
 
-Implementation: [`cf_try_real` (lib/config/src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/config.c#L2492).
+Implementation: [`cf_try_real` (lib/config/src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/config.c#L2593).
 
 Guarantee: strong. A read; the configuration is untouched and `out` is unspecified
 unless the result is CF_OK.
@@ -775,7 +775,7 @@ Alloc: none.
 CF_API cf_type cf_type_of(const cf_config* c, const char* key);
 ```
 
-Implementation: [`cf_type_of` (lib/config/src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/config.c#L2502).
+Implementation: [`cf_type_of` (lib/config/src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/config.c#L2603).
 
 CF_TYPE_NULL when the key is absent.
 Guarantee: nothrow. CF_TYPE_NULL for an absent key.
@@ -784,7 +784,7 @@ Guarantee: nothrow. CF_TYPE_NULL for an absent key.
 CF_NODISCARD CF_API cf_bool cf_has(const cf_config* c, const char* key);
 ```
 
-Implementation: [`cf_has` (lib/config/src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/config.c#L2507).
+Implementation: [`cf_has` (lib/config/src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/config.c#L2608).
 
 Guarantee: strong. A query; it changes nothing.
 
@@ -793,7 +793,7 @@ CF_NODISCARD CF_API cf_bool cf_tracks_reads(const cf_config* c);
 CF_NODISCARD CF_API cf_bool cf_was_read(const cf_config* c, const char* key);
 ```
 
-Implementation: [`cf_tracks_reads` (lib/config/src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/config.c#L2545), [`cf_was_read` (lib/config/src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/config.c#L2549).
+Implementation: [`cf_tracks_reads` (lib/config/src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/config.c#L2646), [`cf_was_read` (lib/config/src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/config.c#L2650).
 
 Read coverage (cf_builder_track_reads). CF_FALSE and 0 for a
 configuration that does not track. cf_read_count counts keys, not
@@ -804,7 +804,7 @@ Guarantee: strong. A query; it changes nothing.
 CF_API size_t cf_read_count(const cf_config* c);
 ```
 
-Implementation: [`cf_read_count` (lib/config/src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/config.c#L2560).
+Implementation: [`cf_read_count` (lib/config/src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/config.c#L2661).
 
 Guarantee: nothrow.
 
@@ -814,7 +814,7 @@ CF_EXPERIMENTAL(2, 1) cf_bool cf_tracks_misreads(const cf_config* c);
 
 Experimental since 2.1: outside the 1.x promise until the next minor release makes it promised or removes it.
 
-Implementation: [`cf_tracks_misreads` (lib/config/src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/config.c#L2511).
+Implementation: [`cf_tracks_misreads` (lib/config/src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/config.c#L2612).
 
 Misreads (cf_builder_track_misreads). cf_misreads is the number of
 distinct (key, kind, wanted) recorded, 0 for a configuration that does
@@ -831,7 +831,7 @@ CF_EXPERIMENTAL(2, 1) size_t cf_misreads(const cf_config* c);
 
 Experimental since 2.1: outside the 1.x promise until the next minor release makes it promised or removes it.
 
-Implementation: [`cf_misreads` (lib/config/src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/config.c#L2515).
+Implementation: [`cf_misreads` (lib/config/src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/config.c#L2616).
 
 Guarantee: strong. A query; it changes nothing.
 
@@ -841,7 +841,7 @@ CF_EXPERIMENTAL(2, 1) cf_bool cf_misread_at(const cf_config* c, size_t i, const 
 
 Experimental since 2.1: outside the 1.x promise until the next minor release makes it promised or removes it.
 
-Implementation: [`cf_misread_at` (lib/config/src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/config.c#L2519).
+Implementation: [`cf_misread_at` (lib/config/src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/config.c#L2620).
 
 Guarantee: strong. A query; it changes nothing.
 
@@ -858,7 +858,7 @@ set is the question, and it is not the secret.
 CF_API size_t cf_explain(const cf_config* c, const char* key, char* buf, size_t cap);
 ```
 
-Implementation: [`cf_explain` (lib/config/src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/config.c#L2578).
+Implementation: [`cf_explain` (lib/config/src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/config.c#L2679).
 
 Guarantee: strong. The configuration is untouched; the size needed is returned and
 `buf` is the caller's.
@@ -867,7 +867,7 @@ Guarantee: strong. The configuration is untouched; the size needed is returned a
 CF_API size_t cf_explain_json(const cf_config* c, const char* key, cf_report_mode mode, char* buf, size_t cap);
 ```
 
-Implementation: [`cf_explain_json` (lib/config/src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/config.c#L2642).
+Implementation: [`cf_explain_json` (lib/config/src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/config.c#L2743).
 
 The same chain as JSON, for an administration endpoint or a tool:
 cf_report_key_write says what it holds. CF_REPORT_BLIND is what an
@@ -879,7 +879,7 @@ Guarantee: strong. As cf_explain.
 CF_API size_t cf_inspect(const cf_config* c, char* buf, size_t cap);
 ```
 
-Implementation: [`cf_inspect` (lib/config/src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/config.c#L2589).
+Implementation: [`cf_inspect` (lib/config/src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/config.c#L2690).
 
 Guarantee: strong. As cf_explain.
 
@@ -931,7 +931,7 @@ Guarantee: strong. Neither configuration is touched; the size needed is returned
 CF_API cf_u64 cf_digest(const cf_config* c);
 ```
 
-Implementation: [`cf_digest` (lib/config/src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/config.c#L2613).
+Implementation: [`cf_digest` (lib/config/src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/config.c#L2714).
 
 Order-independent over the resolved configuration, identical on
 every platform and in both portability modes.
@@ -941,7 +941,7 @@ Guarantee: nothrow.
 CF_API cf_u64 cf_fingerprint(const cf_config* c);
 ```
 
-Implementation: [`cf_fingerprint` (lib/config/src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/config.c#L2617).
+Implementation: [`cf_fingerprint` (lib/config/src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/config.c#L2718).
 
 What identifies this configuration where operators look - a log line,
 a trace, a report's "fingerprint": as cf_digest, except that a secret
@@ -956,7 +956,7 @@ Guarantee: nothrow.
 CF_API size_t cf_fingerprint_format(cf_u64 fp, char* buf, size_t cap);
 ```
 
-Implementation: [`cf_fingerprint_format` (lib/config/src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/config.c#L2622).
+Implementation: [`cf_fingerprint_format` (lib/config/src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/config.c#L2723).
 
 `fp` as reports and logs write it, "fnv1a:" and sixteen hex digits,
 in `buf` as far as `cap` allows; the length it needs, 22. (1.1)
@@ -966,7 +966,7 @@ Guarantee: nothrow. `buf` is the caller's; the length needed is returned.
 CF_API size_t cf_report(const cf_config* c, const cf_report_info* info, char* buf, size_t cap);
 ```
 
-Implementation: [`cf_report` (lib/config/src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/config.c#L2654).
+Implementation: [`cf_report` (lib/config/src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/config.c#L2755).
 
 The provenance report: the whole key space with every candidate,
 serialised. Doctor compares two of them; the library can read one
@@ -987,7 +987,7 @@ caller's.
 CF_API size_t cf_schema(const cf_config* c, const char* title, char* buf, size_t cap);
 ```
 
-Implementation: [`cf_schema` (lib/config/src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/config.c#L2599).
+Implementation: [`cf_schema` (lib/config/src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/config.c#L2700).
 
 The configuration's contract as a JSON Schema, closed when it rejects
 unknown keys (CF_UNKNOWN_REJECT). See cf_schema_write.
@@ -1033,7 +1033,7 @@ CF_API const cf_source_view* cf_sources(const cf_config* c);
 CF_API const cf_defset* cf_defs(const cf_config* c);
 ```
 
-Implementation: [`cf_count` (lib/config/src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/config.c#L2626), [`cf_apply_stats` (lib/config/src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/config.c#L2630), [`cf_keys` (lib/config/src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/config.c#L2666), [`cf_sources` (lib/config/src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/config.c#L2634), [`cf_defs` (lib/config/src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/config.c#L2638).
+Implementation: [`cf_count` (lib/config/src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/config.c#L2727), [`cf_apply_stats` (lib/config/src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/config.c#L2731), [`cf_keys` (lib/config/src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/config.c#L2767), [`cf_sources` (lib/config/src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/config.c#L2735), [`cf_defs` (lib/config/src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/config.c#L2739).
 
 How many keys the configuration knows. A key is known once anything
 supplied it, so one that has no value is counted too: every candidate
@@ -1082,7 +1082,7 @@ is the question people actually ask after changing a setting.
 CF_NODISCARD CF_API cf_config* cf_derive(const cf_config* base, const char* source_name, const cf_pair* pairs, size_t count, cf_error* err);
 ```
 
-Implementation: [`cf_derive` (lib/config/src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/config.c#L1868).
+Implementation: [`cf_derive` (lib/config/src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/config.c#L1969).
 
 Guarantee: strong. The derived configuration is made apart; on failure `base` is as
 it was and nothing is left behind.
@@ -1091,7 +1091,7 @@ it was and nothing is left behind.
 CF_NODISCARD CF_API cf_config* cf_derive_in(const cf_config* base, cf_arena* arena, const char*    source_name, const cf_pair* pairs, size_t count, cf_error* err);
 ```
 
-Implementation: [`cf_derive_in` (lib/config/src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/config.c#L1890).
+Implementation: [`cf_derive_in` (lib/config/src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/config.c#L1991).
 
 The same, inside an arena the caller owns. A configuration built with
 cf_build_in has no allocator to borrow, so it must use this one.
@@ -1133,7 +1133,7 @@ ordinary index keys. The source's write callback sees local keys.
 CF_NODISCARD CF_API cf_bool cf_write(const cf_config* c, const char* target, const cf_write_item* items, size_t count, const char* meta, cf_error* err);
 ```
 
-Implementation: [`cf_write` (lib/config/src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/config.c#L2198).
+Implementation: [`cf_write` (lib/config/src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/config.c#L2299).
 
 Guarantee: strong. The configuration (the read snapshot) never changes; every item is
 checked before one is written, and a store writes them in one transaction that is
@@ -1164,7 +1164,7 @@ which costs the re-read you were about to do anyway.
 CF_NODISCARD CF_API cf_bool cf_changed(const cf_config* c);
 ```
 
-Implementation: [`cf_changed` (lib/config/src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/config.c#L2275).
+Implementation: [`cf_changed` (lib/config/src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/config.c#L2376).
 
 Guarantee: strong. A query; it changes nothing.
 
@@ -1172,7 +1172,7 @@ Guarantee: strong. A query; it changes nothing.
 CF_API size_t cf_watch_count(const cf_config* c);
 ```
 
-Implementation: [`cf_watch_count` (lib/config/src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/config.c#L2264).
+Implementation: [`cf_watch_count` (lib/config/src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/config.c#L2365).
 
 Guarantee: nothrow.
 
@@ -1180,7 +1180,7 @@ Guarantee: nothrow.
 CF_API const char* cf_watch_path(const cf_config* c, size_t i);
 ```
 
-Implementation: [`cf_watch_path` (lib/config/src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/config.c#L2268).
+Implementation: [`cf_watch_path` (lib/config/src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/config.c#L2369).
 
 Guarantee: nothrow. NULL for an index past the end.
 
@@ -1222,7 +1222,7 @@ cf_changed works as before.
 CF_NODISCARD CF_API cf_watcher* cf_watcher_open(const cf_config* c, const cf_allocator* a, cf_error* err);
 ```
 
-Implementation: [`cf_watcher_open` (lib/config/src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/config.c#L2298).
+Implementation: [`cf_watcher_open` (lib/config/src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/config.c#L2399).
 
 `a` NULL means the default allocator. Fails when the configuration
 read no file, since there would be nothing to wake it.
@@ -1233,7 +1233,7 @@ can be made.
 CF_API int cf_watcher_fd(const cf_watcher* w);
 ```
 
-Implementation: [`cf_watcher_fd` (lib/config/src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/config.c#L2317).
+Implementation: [`cf_watcher_fd` (lib/config/src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/config.c#L2418).
 
 -1 where it is not a descriptor.
 Guarantee: nothrow.
@@ -1242,7 +1242,7 @@ Guarantee: nothrow.
 CF_API void* cf_watcher_handle(const cf_watcher* w);
 ```
 
-Implementation: [`cf_watcher_handle` (lib/config/src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/config.c#L2321).
+Implementation: [`cf_watcher_handle` (lib/config/src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/config.c#L2422).
 
 NULL where it is not a HANDLE.
 Guarantee: nothrow.
@@ -1251,7 +1251,7 @@ Guarantee: nothrow.
 CF_NODISCARD CF_API cf_bool cf_watcher_drain(cf_watcher* w);
 ```
 
-Implementation: [`cf_watcher_drain` (lib/config/src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/config.c#L2325).
+Implementation: [`cf_watcher_drain` (lib/config/src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/config.c#L2426).
 
 Guarantee: strong. A failed drain leaves the watcher valid, to be asked again.
 
@@ -1259,7 +1259,7 @@ Guarantee: strong. A failed drain leaves the watcher valid, to be asked again.
 CF_API int cf_watcher_wait(cf_watcher* w, long timeout_ms);
 ```
 
-Implementation: [`cf_watcher_wait` (lib/config/src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/config.c#L2329).
+Implementation: [`cf_watcher_wait` (lib/config/src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/config.c#L2430).
 
 1 woken (and drained), 0 timed out, -1 failed. Negative: no limit.
 Guarantee: basic. A failure (-1) leaves the watcher valid, but wake-ups may have been
@@ -1269,7 +1269,7 @@ consumed.
 CF_API void cf_watcher_close(cf_watcher* w);
 ```
 
-Implementation: [`cf_watcher_close` (lib/config/src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/config.c#L2333).
+Implementation: [`cf_watcher_close` (lib/config/src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/config.c#L2434).
 
 Guarantee: nothrow. A NULL watcher is accepted.
 
@@ -1277,7 +1277,7 @@ Guarantee: nothrow. A NULL watcher is accepted.
 CF_API void cf_config_ref(cf_config* c);
 ```
 
-Implementation: [`cf_config_ref` (lib/config/src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/config.c#L2337).
+Implementation: [`cf_config_ref` (lib/config/src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/config.c#L2438).
 
 Guarantee: nothrow.
 
@@ -1285,7 +1285,7 @@ Guarantee: nothrow.
 CF_API void cf_config_free(cf_config* c);
 ```
 
-Implementation: [`cf_config_free` (lib/config/src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/config.c#L2343).
+Implementation: [`cf_config_free` (lib/config/src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/config.c#L2444).
 
 Guarantee: nothrow. A NULL configuration is accepted.
 
@@ -1445,7 +1445,7 @@ sensitive. None of that can be recovered from the values alone.
 CF_API void cf_def_init_sized(cf_def* d, size_t size, cf_type type, const char* key);
 ```
 
-Implementation: [`cf_def_init_sized` (lib/config/src/core/define.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/define.c#L31).
+Implementation: [`cf_def_init_sized` (lib/config/src/core/define.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/define.c#L33).
 
 Initialise a descriptor: every field zero, `size` the caller's
 sizeof(cf_def), so a library from a later 1.x writes no further than
@@ -1463,7 +1463,7 @@ CF_NODISCARD CF_API cf_bool cf_defset_init(cf_defset* ds, cf_arena* arena, size_
 
 Internal (`CF_INTERNAL_API`): exported for the library's own layers, Doctor and the tests, outside the 1.x promise; a program does not see it.
 
-Implementation: [`cf_defset_init` (lib/config/src/core/define.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/define.c#L45).
+Implementation: [`cf_defset_init` (lib/config/src/core/define.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/define.c#L47).
 
 ```c
 CF_NODISCARD CF_API cf_bool cf_define(cf_defset* ds, const cf_def* d, cf_error* err);
@@ -1471,7 +1471,7 @@ CF_NODISCARD CF_API cf_bool cf_define(cf_defset* ds, const cf_def* d, cf_error* 
 
 Internal (`CF_INTERNAL_API`): exported for the library's own layers, Doctor and the tests, outside the 1.x promise; a program does not see it.
 
-Implementation: [`cf_define` (lib/config/src/core/define.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/define.c#L402).
+Implementation: [`cf_define` (lib/config/src/core/define.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/define.c#L413).
 
 Copies the descriptor. Rejects a definition that contradicts itself:
 a default outside its own range, an empty enum, a range on a type
@@ -1487,7 +1487,7 @@ CF_NODISCARD CF_API cf_bool cf_def_real(cf_defset* ds, const char* key, double d
 
 Internal (`CF_INTERNAL_API`): exported for the library's own layers, Doctor and the tests, outside the 1.x promise; a program does not see it.
 
-Implementation: [`cf_def_bool` (lib/config/src/core/define.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/define.c#L563), [`cf_def_int` (lib/config/src/core/define.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/define.c#L575), [`cf_def_text` (lib/config/src/core/define.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/define.c#L592), [`cf_def_real` (lib/config/src/core/define.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/define.c#L605).
+Implementation: [`cf_def_bool` (lib/config/src/core/define.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/define.c#L578), [`cf_def_int` (lib/config/src/core/define.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/define.c#L590), [`cf_def_text` (lib/config/src/core/define.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/define.c#L607), [`cf_def_real` (lib/config/src/core/define.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/define.c#L620).
 
 ```c
 CF_API void cf_defset_seal(cf_defset* ds);
@@ -1495,7 +1495,7 @@ CF_API void cf_defset_seal(cf_defset* ds);
 
 Internal (`CF_INTERNAL_API`): exported for the library's own layers, Doctor and the tests, outside the 1.x promise; a program does not see it.
 
-Implementation: [`cf_defset_seal` (lib/config/src/core/define.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/define.c#L709).
+Implementation: [`cf_defset_seal` (lib/config/src/core/define.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/define.c#L724).
 
 Sorts for binary lookup; calling twice is harmless.
 
@@ -1505,7 +1505,7 @@ CF_NODISCARD CF_API cf_bool cf_defset_open(cf_defset* ds, const char* prefix, cf
 
 Internal (`CF_INTERNAL_API`): exported for the library's own layers, Doctor and the tests, outside the 1.x promise; a program does not see it.
 
-Implementation: [`cf_defset_open` (lib/config/src/core/define.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/define.c#L652).
+Implementation: [`cf_defset_open` (lib/config/src/core/define.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/define.c#L667).
 
 Exempt a prefix from unknown-key rejection.
 
@@ -1544,7 +1544,7 @@ CF_NODISCARD CF_API cf_bool cf_defset_is_open(const cf_defset* ds, const char* k
 
 Internal (`CF_INTERNAL_API`): exported for the library's own layers, Doctor and the tests, outside the 1.x promise; a program does not see it.
 
-Implementation: [`cf_defset_is_open` (lib/config/src/core/define.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/define.c#L677).
+Implementation: [`cf_defset_is_open` (lib/config/src/core/define.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/define.c#L692).
 
 Is this key under an exempt prefix? Matches at a segment boundary
 only, so opening "plugins" does not open "pluginsomething".
@@ -1555,7 +1555,7 @@ CF_API const cf_def* cf_defset_find(const cf_defset* ds, const char* key, size_t
 
 Internal (`CF_INTERNAL_API`): exported for the library's own layers, Doctor and the tests, outside the 1.x promise; a program does not see it.
 
-Implementation: [`cf_defset_find` (lib/config/src/core/define.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/define.c#L814).
+Implementation: [`cf_defset_find` (lib/config/src/core/define.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/define.c#L829).
 
 Authored descriptors are returned for exact keys. A declared list's
 count and canonical decimal indices return immutable scalar
@@ -1568,7 +1568,7 @@ CF_API const cf_def* cf_defset_list(const cf_defset* ds, const char* key, size_t
 
 Internal (`CF_INTERNAL_API`): exported for the library's own layers, Doctor and the tests, outside the 1.x promise; a program does not see it.
 
-Implementation: [`cf_defset_list` (lib/config/src/core/define.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/define.c#L843).
+Implementation: [`cf_defset_list` (lib/config/src/core/define.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/define.c#L858).
 
 The declared list containing a key, including its root. Unlike find,
 this also finds a list whose caller supplied an invalid member name,
@@ -1581,7 +1581,7 @@ CF_API cf_u64 cf_defset_fingerprint(const cf_defset* ds, const cf_keyspace* ks);
 
 Internal (`CF_INTERNAL_API`): exported for the library's own layers, Doctor and the tests, outside the 1.x promise; a program does not see it.
 
-Implementation: [`cf_defset_fingerprint` (lib/config/src/core/define.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/define.c#L1044).
+Implementation: [`cf_defset_fingerprint` (lib/config/src/core/define.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/define.c#L1059).
 
 The fingerprint of `ks` under these definitions (cf_fingerprint): as
 cf_ks_digest, except that a key defined CF_SENSITIVE enters by its
@@ -1593,7 +1593,7 @@ CF_API cf_u64 cf_fingerprint_seed(void);
 CF_API cf_u64 cf_fingerprint_step(cf_u64 h, const char* key, size_t keylen, const char* type, const char* text, size_t n);
 ```
 
-Implementation: [`cf_fingerprint_seed` (lib/config/src/core/define.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/define.c#L1028), [`cf_fingerprint_step` (lib/config/src/core/define.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/define.c#L1034).
+Implementation: [`cf_fingerprint_seed` (lib/config/src/core/define.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/define.c#L1043), [`cf_fingerprint_step` (lib/config/src/core/define.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/define.c#L1049).
 
 The fingerprint a step at a time, for a reader that holds keys as text -
 Doctor, recomputing a report's - and not as a key space: start from the
@@ -1610,7 +1610,7 @@ CF_API const cf_def* cf_defset_at(const cf_defset* ds, size_t i);
 
 Internal (`CF_INTERNAL_API`): exported for the library's own layers, Doctor and the tests, outside the 1.x promise; a program does not see it.
 
-Implementation: [`cf_defset_count` (lib/config/src/core/define.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/define.c#L848), [`cf_defset_at` (lib/config/src/core/define.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/define.c#L852).
+Implementation: [`cf_defset_count` (lib/config/src/core/define.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/define.c#L863), [`cf_defset_at` (lib/config/src/core/define.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/define.c#L867).
 
 ```c
 CF_API const cf_def* cf_defset_nearest(const cf_defset* ds, const char* key, size_t keylen, size_t* distance);
@@ -1618,7 +1618,7 @@ CF_API const cf_def* cf_defset_nearest(const cf_defset* ds, const char* key, siz
 
 Internal (`CF_INTERNAL_API`): exported for the library's own layers, Doctor and the tests, outside the 1.x promise; a program does not see it.
 
-Implementation: [`cf_defset_nearest` (lib/config/src/core/define.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/define.c#L977).
+Implementation: [`cf_defset_nearest` (lib/config/src/core/define.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/define.c#L992).
 
 Nearest defined key by edit distance, or NULL when nothing is close.
 This is what turns "unknown key server.pot" into "did you mean
@@ -3210,7 +3210,7 @@ Guarantee: basic. As cf_ks_add.
 CF_NODISCARD CF_API cf_bool cf_ks_add_resolved(cf_keyspace* ks, const char* key, size_t keylen, int source, const cf_value* value, const char* at);
 ```
 
-Implementation: [`cf_ks_add_resolved` (lib/config/src/core/keyspace.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/keyspace.c#L457).
+Implementation: [`cf_ks_add_resolved` (lib/config/src/core/keyspace.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/keyspace.c#L480).
 
 Guarantee: basic. As cf_ks_add.
 
@@ -3230,17 +3230,29 @@ CF_NODISCARD CF_API cf_bool cf_ks_rename_list(cf_keyspace* ks, const char* from,
 
 Internal (`CF_INTERNAL_API`): exported for the library's own layers, Doctor and the tests, outside the 1.x promise; a program does not see it.
 
-Implementation: [`cf_ks_rename` (lib/config/src/core/keyspace.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/keyspace.c#L423), [`cf_ks_rename_list` (lib/config/src/core/keyspace.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/keyspace.c#L428).
+Implementation: [`cf_ks_rename` (lib/config/src/core/keyspace.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/keyspace.c#L440), [`cf_ks_rename_list` (lib/config/src/core/keyspace.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/keyspace.c#L451).
 
 Before resolution: every candidate of `from` offered to `to` as well,
 CF_CAND_RENAMED. The old key keeps its own, for code that still reads
 it. False when there is no room.
 
 ```c
+CF_NODISCARD CF_API cf_bool cf_ks_rename_with(cf_keyspace* ks, const char* from, size_t fromlen, const char* to, size_t tolen, cf_ks_convert_fn conv, void* ctx);
+```
+
+Internal (`CF_INTERNAL_API`): exported for the library's own layers, Doctor and the tests, outside the 1.x promise; a program does not see it.
+
+Implementation: [`cf_ks_rename_with` (lib/config/src/core/keyspace.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/keyspace.c#L445).
+
+As cf_ks_rename, with `conv` (or NULL) called on each copy; a converted
+copy's place says "(from &lt;old>, converted)". False on no room and on a FAIL
+of the hook, which the caller tells apart by the error it set in `ctx`.
+
+```c
 CF_NODISCARD CF_API cf_bool cf_ks_add_candidate(cf_keyspace* ks, const char* key, size_t keylen, const cf_candidate* c);
 ```
 
-Implementation: [`cf_ks_add_candidate` (lib/config/src/core/keyspace.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/keyspace.c#L433).
+Implementation: [`cf_ks_add_candidate` (lib/config/src/core/keyspace.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/keyspace.c#L456).
 
 Record a copy of another key space's candidate, at its rank, with what
 it was - textual, a default, the template it was made from - and not
@@ -3254,7 +3266,7 @@ CF_NODISCARD CF_API cf_bool cf_ks_replay(cf_keyspace* ks, const cf_keyspace* bas
 
 Internal (`CF_INTERNAL_API`): exported for the library's own layers, Doctor and the tests, outside the 1.x promise; a program does not see it.
 
-Implementation: [`cf_ks_replay` (lib/config/src/core/keyspace.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/keyspace.c#L497).
+Implementation: [`cf_ks_replay` (lib/config/src/core/keyspace.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/keyspace.c#L520).
 
 Internal snapshot replay, in original insertion order and at the
 source-local keys of appended lists. Derived counts are not replayed.
@@ -3265,7 +3277,7 @@ CF_NODISCARD CF_API cf_bool cf_ks_append_list(cf_keyspace* ks, const char* key, 
 
 Internal (`CF_INTERNAL_API`): exported for the library's own layers, Doctor and the tests, outside the 1.x promise; a program does not see it.
 
-Implementation: [`cf_ks_append_list` (lib/config/src/core/keyspace.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/keyspace.c#L534).
+Implementation: [`cf_ks_append_list` (lib/config/src/core/keyspace.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/keyspace.c#L557).
 
 Internal: plans are collected before this changes the key index.
 Resolve once after applying all plans.
@@ -3276,7 +3288,7 @@ CF_API const char* cf_ks_original_key(const cf_keyspace* ks, const cf_candidate*
 
 Internal (`CF_INTERNAL_API`): exported for the library's own layers, Doctor and the tests, outside the 1.x promise; a program does not see it.
 
-Implementation: [`cf_ks_original_key` (lib/config/src/core/keyspace.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/keyspace.c#L469).
+Implementation: [`cf_ks_original_key` (lib/config/src/core/keyspace.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/keyspace.c#L492).
 
 The source-local key before remapping, or NULL if it never moved.
 c must be an owned candidate of this space, not a copied descriptor.
@@ -3287,7 +3299,7 @@ CF_NODISCARD CF_API cf_bool cf_ks_reject(cf_keyspace* ks, const char* key, size_
 
 Internal (`CF_INTERNAL_API`): exported for the library's own layers, Doctor and the tests, outside the 1.x promise; a program does not see it.
 
-Implementation: [`cf_ks_reject` (lib/config/src/core/keyspace.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/keyspace.c#L618).
+Implementation: [`cf_ks_reject` (lib/config/src/core/keyspace.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/keyspace.c#L641).
 
 Record a candidate that failed conversion or validation. It never
 wins, and it is never erased: explain() has to be able to say that
@@ -3299,7 +3311,7 @@ CF_NODISCARD CF_API cf_bool cf_ks_resolve(cf_keyspace* ks);
 
 Internal (`CF_INTERNAL_API`): exported for the library's own layers, Doctor and the tests, outside the 1.x promise; a program does not see it.
 
-Implementation: [`cf_ks_resolve` (lib/config/src/core/keyspace.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/keyspace.c#L722).
+Implementation: [`cf_ks_resolve` (lib/config/src/core/keyspace.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/keyspace.c#L745).
 
 Sorts and groups the candidates. Returns false when there was no room
 to do it, which is not the same as an empty configuration: the caller
@@ -3312,7 +3324,7 @@ CF_API size_t cf_ks_candidate_count(const cf_keyspace* ks);
 
 Internal (`CF_INTERNAL_API`): exported for the library's own layers, Doctor and the tests, outside the 1.x promise; a program does not see it.
 
-Implementation: [`cf_ks_candidate_count` (lib/config/src/core/keyspace.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/keyspace.c#L718).
+Implementation: [`cf_ks_candidate_count` (lib/config/src/core/keyspace.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/keyspace.c#L741).
 
 Candidates appended so far, which is what an out-of-room message
 should name: the caller sized a buffer, not a key count.
@@ -3323,7 +3335,7 @@ CF_API void cf_ks_infer_untyped(cf_keyspace* ks);
 
 Internal (`CF_INTERNAL_API`): exported for the library's own layers, Doctor and the tests, outside the 1.x promise; a program does not see it.
 
-Implementation: [`cf_ks_infer_untyped` (lib/config/src/core/keyspace.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/keyspace.c#L809).
+Implementation: [`cf_ks_infer_untyped` (lib/config/src/core/keyspace.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/keyspace.c#L832).
 
 Tier 0 typing. Every textual candidate that no definition claimed
 gets a type by inference, which is deliberately timid: see D-24.
@@ -3340,7 +3352,7 @@ CF_API cf_entry* cf_ks_at_mut(cf_keyspace* ks, size_t i);
 
 Internal (`CF_INTERNAL_API`): exported for the library's own layers, Doctor and the tests, outside the 1.x promise; a program does not see it.
 
-Implementation: [`cf_ks_at_mut` (lib/config/src/core/keyspace.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/keyspace.c#L830).
+Implementation: [`cf_ks_at_mut` (lib/config/src/core/keyspace.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/keyspace.c#L853).
 
 Mutable access, for the passes that legitimately change outcomes:
 applying definitions marks candidates rejected. Casting away const
@@ -3353,7 +3365,7 @@ CF_API void cf_ks_reselect(cf_keyspace* ks);
 
 Internal (`CF_INTERNAL_API`): exported for the library's own layers, Doctor and the tests, outside the 1.x promise; a program does not see it.
 
-Implementation: [`cf_ks_reselect` (lib/config/src/core/keyspace.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/keyspace.c#L837).
+Implementation: [`cf_ks_reselect` (lib/config/src/core/keyspace.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/keyspace.c#L860).
 
 Recompute the selected candidate of every entry. Needed after
 anything that changes an outcome, which in practice means after the
@@ -3365,7 +3377,7 @@ CF_API const cf_entry* cf_ks_find(const cf_keyspace* ks, const char* key, size_t
 
 Internal (`CF_INTERNAL_API`): exported for the library's own layers, Doctor and the tests, outside the 1.x promise; a program does not see it.
 
-Implementation: [`cf_ks_find` (lib/config/src/core/keyspace.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/keyspace.c#L898).
+Implementation: [`cf_ks_find` (lib/config/src/core/keyspace.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/keyspace.c#L921).
 
 Binary search over the resolved entries. NULL when absent, and NULL
 before cf_ks_resolve: a half-built space has no answer to give, and
@@ -3377,7 +3389,7 @@ CF_API size_t cf_ks_lower_bound(const cf_keyspace* ks, const char* key, size_t k
 
 Internal (`CF_INTERNAL_API`): exported for the library's own layers, Doctor and the tests, outside the 1.x promise; a program does not see it.
 
-Implementation: [`cf_ks_lower_bound` (lib/config/src/core/keyspace.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/keyspace.c#L878).
+Implementation: [`cf_ks_lower_bound` (lib/config/src/core/keyspace.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/keyspace.c#L901).
 
 Index of the first key that is not less than `key`, which is where a
 prefix scan starts. Returns cf_ks_count when every key sorts before
@@ -3390,7 +3402,7 @@ CF_API const cf_value* cf_ks_get(const cf_keyspace* ks, const char* key, size_t 
 
 Internal (`CF_INTERNAL_API`): exported for the library's own layers, Doctor and the tests, outside the 1.x promise; a program does not see it.
 
-Implementation: [`cf_ks_get` (lib/config/src/core/keyspace.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/keyspace.c#L921).
+Implementation: [`cf_ks_get` (lib/config/src/core/keyspace.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/keyspace.c#L944).
 
 The selected value, or NULL when the key is absent or every
 candidate was rejected.
@@ -3402,7 +3414,7 @@ CF_API const cf_entry* cf_ks_at(const cf_keyspace* ks, size_t i);
 
 Internal (`CF_INTERNAL_API`): exported for the library's own layers, Doctor and the tests, outside the 1.x promise; a program does not see it.
 
-Implementation: [`cf_ks_count` (lib/config/src/core/keyspace.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/keyspace.c#L929), [`cf_ks_at` (lib/config/src/core/keyspace.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/keyspace.c#L933).
+Implementation: [`cf_ks_count` (lib/config/src/core/keyspace.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/keyspace.c#L952), [`cf_ks_at` (lib/config/src/core/keyspace.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/keyspace.c#L956).
 
 ```c
 CF_NODISCARD CF_API cf_bool cf_ks_is_sorted(const cf_keyspace* ks);
@@ -3410,7 +3422,7 @@ CF_NODISCARD CF_API cf_bool cf_ks_is_sorted(const cf_keyspace* ks);
 
 Internal (`CF_INTERNAL_API`): exported for the library's own layers, Doctor and the tests, outside the 1.x promise; a program does not see it.
 
-Implementation: [`cf_ks_is_sorted` (lib/config/src/core/keyspace.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/keyspace.c#L863).
+Implementation: [`cf_ks_is_sorted` (lib/config/src/core/keyspace.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/keyspace.c#L886).
 
 Verifies the ordering invariant the design depends on.
 
@@ -3420,7 +3432,7 @@ CF_API cf_u64 cf_ks_digest(const cf_keyspace* ks);
 
 Internal (`CF_INTERNAL_API`): exported for the library's own layers, Doctor and the tests, outside the 1.x promise; a program does not see it.
 
-Implementation: [`cf_ks_digest` (lib/config/src/core/keyspace.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/keyspace.c#L1115).
+Implementation: [`cf_ks_digest` (lib/config/src/core/keyspace.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/keyspace.c#L1138).
 
 Order-independent digest over the resolved space. Two runs that
 produce the same configuration produce the same digest, on every
@@ -3433,7 +3445,7 @@ CF_API cf_u64 cf_ks_value_digest(const cf_value* v);
 
 Internal (`CF_INTERNAL_API`): exported for the library's own layers, Doctor and the tests, outside the 1.x promise; a program does not see it.
 
-Implementation: [`cf_ks_value_digest` (lib/config/src/core/keyspace.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/keyspace.c#L974).
+Implementation: [`cf_ks_value_digest` (lib/config/src/core/keyspace.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/keyspace.c#L997).
 
 FNV-1a over one value's canonical text: what a value-blind report
 says of a secret, so that "did it change" has an answer and "what is
@@ -3445,7 +3457,7 @@ CF_API size_t cf_ks_digest_text(cf_u64 h, char* buf, size_t cap);
 
 Internal (`CF_INTERNAL_API`): exported for the library's own layers, Doctor and the tests, outside the 1.x promise; a program does not see it.
 
-Implementation: [`cf_ks_digest_text` (lib/config/src/core/keyspace.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/keyspace.c#L984).
+Implementation: [`cf_ks_digest_text` (lib/config/src/core/keyspace.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/keyspace.c#L1007).
 
 A digest as a report writes it, "fnv1a:" and sixteen hex digits, in
 `buf` as far as `cap` allows; the length it needs, 22.
@@ -3456,7 +3468,7 @@ CF_API cf_u64 cf_siphash24(const unsigned char* key, const void* p, size_t n);
 
 Internal (`CF_INTERNAL_API`): exported for the library's own layers, Doctor and the tests, outside the 1.x promise; a program does not see it.
 
-Implementation: [`cf_siphash24` (lib/config/src/core/keyspace.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/keyspace.c#L1044).
+Implementation: [`cf_siphash24` (lib/config/src/core/keyspace.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/keyspace.c#L1067).
 
 SipHash-2-4 of `n` bytes under the 16-byte `key` (D-85). INTERNAL:
 exported for the tests' vectors.
@@ -3467,7 +3479,7 @@ CF_API size_t cf_ks_secret_digest_text(const cf_value* v, const unsigned char* k
 
 Internal (`CF_INTERNAL_API`): exported for the library's own layers, Doctor and the tests, outside the 1.x promise; a program does not see it.
 
-Implementation: [`cf_ks_secret_digest_text` (lib/config/src/core/keyspace.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/keyspace.c#L1092).
+Implementation: [`cf_ks_secret_digest_text` (lib/config/src/core/keyspace.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/keyspace.c#L1115).
 
 The digest a report and the fingerprint stand for a secret's value:
 cf_ks_digest_text(cf_ks_value_digest(v)) when `key` is NULL, else
@@ -3814,7 +3826,7 @@ or that drives a cf_live's reloads.
 CF_API const char* cf_log_level_name(cf_log_level level);
 ```
 
-Implementation: [`cf_log_level_name` (lib/config/src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/config.c#L2670).
+Implementation: [`cf_log_level_name` (lib/config/src/core/config.c)](https://github.com/develooper1994/configforge/blob/main/lib/config/src/core/config.c#L2771).
 
 The name of a level: "debug", "info", "warn", "error".
 Guarantee: nothrow. A static name; "?" for a level out of range.

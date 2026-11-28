@@ -60,6 +60,16 @@ typedef enum cf_list_mode {
 
 struct cf_unit; /* cf_numeric.h */
 
+/* Turns a value written under a deprecated key into the value of the key
+   that replaced it. `in` is the value as the old key declares it (its type);
+   set `out` to a value of the new key's type (cf_value_int and the others of
+   cf_value.h; a text is copied by the library before this returns) and return
+   CF_TRUE, or write a short reason to `why` (`cap` bytes) and return CF_FALSE.
+   Pure and cheap: it runs again for every value, at every create and every
+   derive. */
+typedef cf_bool (*cf_migrate_fn)(const cf_value* in, cf_value* out, void* user,
+                                 char* why, size_t cap);
+
 /* A descriptor rather than a chained builder. C89 has no designated
    initializers, so a positionally filled struct would be fragile and
    one filled only by assignment would be verbose; cf_def_init plus
@@ -145,6 +155,18 @@ typedef struct cf_def {
        no parser, is refused by cf_define. A descriptor built by a 1.8 caller
        is shorter than this field, and has none. */
     const struct cf_unit* unit;
+
+    /* A migration (D-122) for a deprecated scalar key with replaced_by: a
+       function that turns each value written under this name into the value
+       of the new key (timeout_s to timeout_ms), run as the value is copied,
+       so every source's value is converted before precedence chooses, and
+       explain() says "(from <old>, converted)". NULL moves the value as it
+       was. Needs CF_DEPRECATED, replaced_by and a scalar key, or cf_define
+       refuses it. A value that holds a reference is refused, not passed on
+       unconverted. `migrate_user` is borrowed and must outlive the
+       configuration. A descriptor built before these members has none. */
+    cf_migrate_fn migrate;
+    void*         migrate_user;
 } cf_def;
 
 /* Initialise a descriptor: every field zero, `size` the caller's

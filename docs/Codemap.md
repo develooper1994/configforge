@@ -79,15 +79,16 @@
 - #define CONFIGFORGE_CF_DEFINE_H 16
 - enum cf_on_invalid 45-53
 - enum cf_list_mode 55-59
-- struct cf_def 70-148
-- #define cf_def_init 158
-- #define CF_MAX_OPEN_PREFIXES 172
-- #define CF_EXPAND_MAX 182
-- #define CF_EXPAND_TOTAL_MAX 192
-- struct cf_defset 199-230
-- enum cf_unknown_policy 349-353
-- struct cf_apply_report 355-361
-- struct cf_rank_names 378-381
+- typedef cf_migrate_fn 70
+- struct cf_def 80-170
+- #define cf_def_init 180
+- #define CF_MAX_OPEN_PREFIXES 194
+- #define CF_EXPAND_MAX 204
+- #define CF_EXPAND_TOTAL_MAX 214
+- struct cf_defset 221-252
+- enum cf_unknown_policy 371-375
+- struct cf_apply_report 377-383
+- struct cf_rank_names 400-403
 `lib/config/include/configforge/cf_edit.h`
 - #define CONFIGFORGE_CF_EDIT_H 26
 - typedef cf_edit 37
@@ -152,6 +153,10 @@
 - typedef cf_cand_rec 190
 - struct cf_keyspace 192-214
 - struct cf_list_part 219-226
+- #define CF_KS_CONV_OK 313
+- #define CF_KS_CONV_SKIP 314
+- #define CF_KS_CONV_FAIL 315
+- typedef cf_ks_convert_fn 316
 `lib/config/include/configforge/cf_live.h`
 - #define CONFIGFORGE_CF_LIVE_H 76
 - typedef cf_live 90
@@ -524,104 +529,107 @@
 - cf_builder_writable 1331-1347
 - config_name_of_rank 1358-1371
 - create_failed 1376-1384
-- cf_builder_create 1386-1709
-- cf_app 1711-1713
-- derive_ghost 1727-1755
-- derive_onto 1757-1866
-- cf_derive 1868-1888
-- cf_derive_in 1890-1897
-- cfi_config_allocator 1899-1901
-- cfi_config_keep_values 1903-1954
-- write_locked 1975-1987
-- write_authorized 1993-2090
-- write_local_keys 2096-2196
-- cf_write 2198-2247
-- cf_watch_count 2264-2266
-- cf_watch_path 2268-2273
-- cf_changed 2275-2294
-- cf_watcher_open 2298-2315
-- cf_watcher_fd 2317-2319
-- cf_watcher_handle 2321-2323
-- cf_watcher_drain 2325-2327
-- cf_watcher_wait 2329-2331
-- cf_watcher_close 2333-2335
-- cf_config_ref 2337-2341
-- cf_config_free 2343-2354
-- misread_judge 2362-2378
-- lookup_as 2382-2404
-- cf_get_bool 2406-2409
-- cf_get_int 2411-2414
-- cf_get_text 2416-2419
-- cf_get_text_n 2421-2435
-- cf_get_real 2438-2441
-- try_of 2444-2456
-- cf_try_bool 2458-2465
-- cf_try_int 2467-2474
-- cf_try_text 2476-2489
-- cf_try_real 2492-2499
-- cf_type_of 2502-2505
-- cf_has 2507-2509
-- cf_tracks_misreads 2511-2513
-- cf_misreads 2515-2517
-- cf_misread_at 2519-2543
-- cf_tracks_reads 2545-2547
-- cf_was_read 2549-2558
-- cf_read_count 2560-2572
-- cf_explain 2578-2587
-- cf_inspect 2589-2597
-- cf_schema 2599-2611
-- cf_digest 2613-2615
-- cf_fingerprint 2617-2620
-- cf_fingerprint_format 2622-2624
-- cf_count 2626-2628
-- cf_apply_stats 2630-2632
-- cf_sources 2634-2636
-- cf_defs 2638-2640
-- cf_explain_json 2642-2652
-- cf_report 2654-2664
-- cf_keys 2666-2668
-- cf_log_level_name 2670-2682
+- cf_memmem_ref 1387-1395
+- struct migrate_ctx 1398-1403
+- migrate_hook 1408-1470
+- cf_builder_create 1472-1810
+- cf_app 1812-1814
+- derive_ghost 1828-1856
+- derive_onto 1858-1967
+- cf_derive 1969-1989
+- cf_derive_in 1991-1998
+- cfi_config_allocator 2000-2002
+- cfi_config_keep_values 2004-2055
+- write_locked 2076-2088
+- write_authorized 2094-2191
+- write_local_keys 2197-2297
+- cf_write 2299-2348
+- cf_watch_count 2365-2367
+- cf_watch_path 2369-2374
+- cf_changed 2376-2395
+- cf_watcher_open 2399-2416
+- cf_watcher_fd 2418-2420
+- cf_watcher_handle 2422-2424
+- cf_watcher_drain 2426-2428
+- cf_watcher_wait 2430-2432
+- cf_watcher_close 2434-2436
+- cf_config_ref 2438-2442
+- cf_config_free 2444-2455
+- misread_judge 2463-2479
+- lookup_as 2483-2505
+- cf_get_bool 2507-2510
+- cf_get_int 2512-2515
+- cf_get_text 2517-2520
+- cf_get_text_n 2522-2536
+- cf_get_real 2539-2542
+- try_of 2545-2557
+- cf_try_bool 2559-2566
+- cf_try_int 2568-2575
+- cf_try_text 2577-2590
+- cf_try_real 2593-2600
+- cf_type_of 2603-2606
+- cf_has 2608-2610
+- cf_tracks_misreads 2612-2614
+- cf_misreads 2616-2618
+- cf_misread_at 2620-2644
+- cf_tracks_reads 2646-2648
+- cf_was_read 2650-2659
+- cf_read_count 2661-2673
+- cf_explain 2679-2688
+- cf_inspect 2690-2698
+- cf_schema 2700-2712
+- cf_digest 2714-2716
+- cf_fingerprint 2718-2721
+- cf_fingerprint_format 2723-2725
+- cf_count 2727-2729
+- cf_apply_stats 2731-2733
+- cf_sources 2735-2737
+- cf_defs 2739-2741
+- cf_explain_json 2743-2753
+- cf_report 2755-2765
+- cf_keys 2767-2769
+- cf_log_level_name 2771-2783
 `lib/config/src/core/define.c`
-- struct cf_list_projection 24-29
-- cf_def_init_sized 31-43
-- cf_defset_init 45-64
-- defset_grow 66-77
-- index_hash 89-97
-- index_put 99-106
-- index_reserve 109-133
-- index_find 135-146
-- def_check_default 156-176
-- def_check 178-320
-- defset_dup_list 324-348
-- defset_dup 350-360
-- defset_under 362-364
-- defset_project_list 366-400
-- cf_define 402-557
-- cf_def_bool 563-573
-- cf_def_int 575-590
-- cf_def_text 592-602
-- cf_def_real 605-620
-- defset_open_room 629-650
-- cf_defset_open 652-675
-- cf_defset_is_open 677-694
-- def_order 696-700
-- cf_defset_seal 709-720
-- defset_inherit_sensitive 731-761
-- defset_exact 763-797
-- defset_list_projection 800-812
-- cf_defset_find 814-841
-- cf_defset_list 843-846
-- cf_defset_count 848-850
-- cf_defset_at 852-857
-- edit_distance 875-919
-- nearest_cutoff 923-932
-- cfi_defset_nearest_secret 934-960
-- cfi_entry_secret 962-975
-- cf_defset_nearest 977-1002
-- fp_mix 1015-1026
-- cf_fingerprint_seed 1028-1030
-- cf_fingerprint_step 1034-1042
-- cf_defset_fingerprint 1044-1073
+- struct cf_list_projection 26-31
+- cf_def_init_sized 33-45
+- cf_defset_init 47-66
+- defset_grow 68-79
+- index_hash 91-99
+- index_put 101-108
+- index_reserve 111-135
+- index_find 137-148
+- def_check_default 158-178
+- def_check 180-329
+- defset_dup_list 333-357
+- defset_dup 359-369
+- defset_under 371-373
+- defset_project_list 375-411
+- cf_define 413-572
+- cf_def_bool 578-588
+- cf_def_int 590-605
+- cf_def_text 607-617
+- cf_def_real 620-635
+- defset_open_room 644-665
+- cf_defset_open 667-690
+- cf_defset_is_open 692-709
+- def_order 711-715
+- cf_defset_seal 724-735
+- defset_inherit_sensitive 746-776
+- defset_exact 778-812
+- defset_list_projection 815-827
+- cf_defset_find 829-856
+- cf_defset_list 858-861
+- cf_defset_count 863-865
+- cf_defset_at 867-872
+- edit_distance 890-934
+- nearest_cutoff 938-947
+- cfi_defset_nearest_secret 949-975
+- cfi_entry_secret 977-990
+- cf_defset_nearest 992-1017
+- fp_mix 1030-1041
+- cf_fingerprint_seed 1043-1045
+- cf_fingerprint_step 1049-1057
+- cf_defset_fingerprint 1059-1088
 `lib/config/src/core/edit.c`
 - struct cf_edit 21-30
 - cf_edit_begin 32-62
@@ -669,42 +677,43 @@
 - cf_ks_add_authored 329-333
 - cf_ks_add_default 335-339
 - cf_ks_remember_original 341-363
-- cf_ks_rename_impl 365-421
-- cf_ks_rename 423-426
-- cf_ks_rename_list 428-431
-- cf_ks_add_candidate 433-455
-- cf_ks_add_resolved 457-461
-- cfi_ks_add_pinned 463-467
-- cf_ks_original_key 469-495
-- cf_ks_replay 497-519
-- ks_fail 524-532
-- cf_ks_append_list 534-616
-- cf_ks_reject 618-621
-- cand_cmp 639-666
-- cand_merge 668-685
-- cand_sort 687-712
-- cf_ks_candidate_count 718-720
-- cf_ks_resolve 722-805
-- cf_ks_infer_untyped 809-828
-- cf_ks_at_mut 830-835
-- cf_ks_reselect 837-861
-- cf_ks_is_sorted 863-876
-- cf_ks_lower_bound 878-896
-- cf_ks_find 898-919
-- cf_ks_get 921-927
-- cf_ks_count 929-931
-- cf_ks_at 933-938
-- fnv1a 949-961
-- ks_value_bytes 965-972
-- cf_ks_value_digest 974-980
-- cf_ks_digest_text 984-999
-- struct sip_state 1008-1010
-- sip_round 1012-1027
-- sip_word 1031-1042
-- cf_siphash24 1044-1078
-- ks_hex_digits 1082-1090
-- cf_ks_secret_digest_text 1092-1113
-- cf_ks_digest 1115-1148
+- cf_ks_rename_impl 365-438
+- cf_ks_rename 440-443
+- cf_ks_rename_with 445-449
+- cf_ks_rename_list 451-454
+- cf_ks_add_candidate 456-478
+- cf_ks_add_resolved 480-484
+- cfi_ks_add_pinned 486-490
+- cf_ks_original_key 492-518
+- cf_ks_replay 520-542
+- ks_fail 547-555
+- cf_ks_append_list 557-639
+- cf_ks_reject 641-644
+- cand_cmp 662-689
+- cand_merge 691-708
+- cand_sort 710-735
+- cf_ks_candidate_count 741-743
+- cf_ks_resolve 745-828
+- cf_ks_infer_untyped 832-851
+- cf_ks_at_mut 853-858
+- cf_ks_reselect 860-884
+- cf_ks_is_sorted 886-899
+- cf_ks_lower_bound 901-919
+- cf_ks_find 921-942
+- cf_ks_get 944-950
+- cf_ks_count 952-954
+- cf_ks_at 956-961
+- fnv1a 972-984
+- ks_value_bytes 988-995
+- cf_ks_value_digest 997-1003
+- cf_ks_digest_text 1007-1022
+- struct sip_state 1031-1033
+- sip_round 1035-1050
+- sip_word 1054-1065
+- cf_siphash24 1067-1101
+- ks_hex_digits 1105-1113
+- cf_ks_secret_digest_text 1115-1136
+- cf_ks_digest 1138-1171
 `lib/config/src/core/live.c`
 - struct cf_live 22-76
 - live_lock 86-90
