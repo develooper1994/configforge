@@ -628,6 +628,12 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - run: sudo apt-get update; sudo apt-get install -y gcovr
       - run: cmake -DEXTRA=coverage -DMODE=quick -DJOBS=4 -P scripts/verify.cmake
+      - run: cmake -DEXTRA=mcdc -DMODE=quick -DJOBS=4 -P scripts/verify.cmake
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        if: always()
+        with:
+          name: mcdc-report
+          path: build-mcdc/mcdc.txt
 
   # The Doctor action, used the way a project would use it, on reports
   # the fixtures generator writes: the change diffed against the base, a

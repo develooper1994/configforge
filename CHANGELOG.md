@@ -8,6 +8,7 @@ nothing: the C interface is not frozen, and a minor bump may change it.
 ### Added
 
 - The CERT C matrix (docs/compliance/Cert.md): every rule with how it is checked, held by gate.cert (D-236).
+- MC/DC measured with GCC's condition coverage and held by a floor (EXTRA=mcdc, D-233)
 
 ### Changed
 

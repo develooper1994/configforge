@@ -26,6 +26,23 @@ option(CF_SANITIZE_MEMORY "Memory sanitiser (clang)" OFF)
 option(CF_SANITIZE_STRICT "clang's extra undefined-behaviour groups" OFF)
 # Line coverage, read by gcovr in `verify.cmake -DEXTRA=coverage`.
 option(CF_COVERAGE "Coverage instrumentation (gcov)" OFF)
+# MC/DC, which GCC 14 and later measures as condition coverage
+# (-fcondition-coverage, on top of CF_COVERAGE), read by
+# scripts/check/mcdc.py in `verify.cmake -DEXTRA=mcdc` (D-233).
+option(CF_COVERAGE_MCDC "Condition coverage instrumentation (GCC 14+)" OFF)
+if(CF_COVERAGE_MCDC)
+  if(NOT CF_COVERAGE)
+    message(FATAL_ERROR "CF_COVERAGE_MCDC needs CF_COVERAGE: "
+                        "-fcondition-coverage is added to --coverage")
+  endif()
+  if(NOT CMAKE_C_COMPILER_ID STREQUAL "GNU" OR CMAKE_C_COMPILER_VERSION
+                                               VERSION_LESS 14)
+    message(
+      FATAL_ERROR
+        "CF_COVERAGE_MCDC needs GCC 14 or later (-fcondition-coverage); "
+        "this compiler is ${CMAKE_C_COMPILER_ID} ${CMAKE_C_COMPILER_VERSION}")
+  endif()
+endif()
 # Coverage-guided fuzzing: every target instrumented for libFuzzer and
 # built with the address and undefined-behaviour sanitisers, and the
 # harnesses in tests/fuzz. Clang only.
@@ -161,6 +178,9 @@ function(configforge_apply_analysis tgt)
   if(CF_COVERAGE)
     target_compile_options(${tgt} PRIVATE --coverage)
     target_link_options(${tgt} PRIVATE --coverage)
+    if(CF_COVERAGE_MCDC)
+      target_compile_options(${tgt} PRIVATE -fcondition-coverage)
+    endif()
   endif()
   if(CF_SANITIZE_THREAD)
     target_compile_options(${tgt} PRIVATE -fsanitize=thread

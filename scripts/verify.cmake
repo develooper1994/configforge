@@ -68,6 +68,10 @@
 #   coverage line coverage of lib/ by the suite, failing below COVERAGE_MIN
 #            percent of lines (default 89) or COVERAGE_BRANCH_MIN of
 #            branches (default 80): ratchets, raised as tests are added
+#   mcdc     MC/DC of lib/ as GCC 14's condition coverage measures it
+#            (scripts/check/mcdc.py), failing below MCDC_MIN percent
+#            (default 81) of condition outcomes: a ratchet too; the
+#            per-file report is build-mcdc/mcdc.txt (D-233)
 #   conformance each reader against its standard's own suite, fetched at a
 #            pinned commit into SUITES (default WORK/suites, else
 #            build-suites/), failing below tests/conformance/floor.txt
@@ -965,6 +969,59 @@ foreach(x ${EXTRA})
       ${COVERAGE_BRANCH_MIN}
       --txt-summary
       build-coverage)
+  elseif(x STREQUAL "mcdc")
+    # MC/DC as GCC 14's condition coverage measures it (D-233): the share of
+    # condition outcomes the suite covers, held by a floor that only rises.
+    find_program(
+      PYTHON3_EXE
+      NAMES python3 python
+      HINTS /opt/cf-tools/bin)
+    find_program(GCC_EXE gcc)
+    find_program(GCOV_EXE gcov)
+    set(gcc_version 0)
+    if(GCC_EXE)
+      execute_process(
+        COMMAND "${GCC_EXE}" -dumpfullversion -dumpversion
+        OUTPUT_VARIABLE gcc_version
+        OUTPUT_STRIP_TRAILING_WHITESPACE ERROR_QUIET)
+    endif()
+    if(NOT GCC_EXE
+       OR NOT GCOV_EXE
+       OR NOT PYTHON3_EXE
+       OR MSVC
+       OR gcc_version VERSION_LESS 14)
+      message("mcdc                  skipped: no GCC 14")
+      continue()
+    endif()
+    # 81.2% measured by L-25 (9875 of 12160 outcomes), rounded down: a
+    # ratchet, raised as tests are added, never lowered (D-233).
+    if(NOT DEFINED MCDC_MIN)
+      set(MCDC_MIN 81)
+    endif()
+    step("mcdc configure" ${CMAKE_COMMAND} --preset mcdc)
+    step(
+      "mcdc build"
+      ${CMAKE_COMMAND}
+      --build
+      --preset
+      mcdc
+      ${parallel})
+    step("mcdc test" ${ctest} --preset mcdc)
+    step(
+      "mcdc >= ${MCDC_MIN}%"
+      "${PYTHON3_EXE}"
+      scripts/check/mcdc.py
+      build-mcdc
+      --root
+      .
+      --filter
+      lib/[^/]*/src/
+      --min
+      ${MCDC_MIN}
+      --report
+      build-mcdc/mcdc.txt
+      --gcov
+      "${GCOV_EXE}")
   elseif(x STREQUAL "tsan")
     if(WIN32)
       message("tsan                  skipped: no thread sanitiser here")
@@ -1370,7 +1427,7 @@ foreach(x ${EXTRA})
         "unknown EXTRA step '${x}': kqueue, tidy, clang, "
         "shared, components, valgrind, proofs, eva, wasm, abi, tsan, msan, "
         "ubsan-strict, afl, infer, yaml, profiles, sizes, compilers, fuzz, "
-        "coverage or conformance")
+        "coverage, mcdc or conformance")
   endif()
 endforeach()
 

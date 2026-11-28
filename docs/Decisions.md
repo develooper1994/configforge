@@ -5497,6 +5497,37 @@ guarantees for the internal names (outside the promise); one word per header.
 
 **Status.** Built: K-9a.
 
+## D-233 — MC/DC is measured with GCC and held by a floor
+
+**Question.** The tool that measures MC/DC (which DO-178C level A and ISO 26262
+ASIL D ask for), and what is held.
+
+**Options.** (1) GCC 14 or later, `-fcondition-coverage` (masking MC/DC), read
+from `gcov`'s JSON; (2) Clang 18 or later, `-fcoverage-mcdc`, read from
+`llvm-cov`; (3) both.
+
+**Decision.** Option 1. GCC is already the coverage compiler (`--coverage`,
+`CF_COVERAGE`), `ubuntu-26.04` and the development distro carry GCC 15, and one
+number from one tool is what a ratchet needs. Clang's MC/DC limits a decision to
+six conditions and would be a second report to agree with. The build is the
+`mcdc` preset (`CF_COVERAGE`, `CF_COVERAGE_MCDC`; configuring it under another
+compiler, or under GCC older than 14, is an error). `scripts/check/mcdc.py`
+runs `gcov --json-format --stdout --conditions` on each `.gcda` and sums
+`lines[].conditions[]`: `count` outcomes, `covered` of them covered, in
+`lib/*/src/`, a file built into two targets merged by the larger `covered`.
+Held: a floor `MCDC_MIN` in `scripts/verify.cmake` (`-DEXTRA=mcdc`), the
+percent of condition outcomes covered, set to the measured value rounded down
+to a whole percent, raised by any card that adds tests, never lowered without
+the maintainer. 100% is not claimed: the per-file report
+(`build-mcdc/mcdc.txt`, CI's `mcdc-report` artifact) shows where it is not.
+
+Rejected: Clang's report (a second number); object-code coverage, the extra
+that level A asks of the object code (outside this tool).
+
+**Tests.** `check.mcdc`.
+
+**Status.** Built: L-25.
+
 ## D-236 — The CERT C matrix is generated, and says what no tool sees
 
 **Question.** Which rules of the SEI CERT C Coding Standard is the library

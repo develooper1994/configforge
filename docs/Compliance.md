@@ -170,9 +170,12 @@ standard asks for can be prepared once here and reused by every user:
   each D-number to its tests is planned.
 * **Structural coverage**: statement and branch coverage are measured by
   the `coverage` build; MC/DC, which DO-178C level A and ISO 26262 ASIL D
-  ask for, is not measured yet. Free compilers can measure it (GCC 14's
-  `-fcondition-coverage`, Clang 18's `-fcoverage-mcdc`); a `coverage`
-  build that reports it is planned.
+  ask for, is measured with GCC 14's `-fcondition-coverage` by the `mcdc`
+  build (`cmake -DEXTRA=mcdc -P scripts/verify.cmake`, D-233): the share of
+  condition outcomes the suite covers in `lib/*/src/`, held by a floor
+  (`MCDC_MIN`) that only rises, with a per-file report (`mcdc-report`, a CI
+  artifact). 100% is not claimed; the report shows where it is not.
+  Object-code coverage, which level A also asks for, is not measured.
 * **A safety manual** (planned, `docs/compliance/safety-manual.md`):
   what a user must hold for the evidence here to apply to their
   program. The build it was shown for (the `misra` preset, the version
