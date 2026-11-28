@@ -55,6 +55,27 @@ add_test(NAME unit.test_wrapper_write.rsp COMMAND test_wrapper_write --rsp
 add_test(NAME unit.test_wrapper_write.rsp_absent
          COMMAND test_wrapper_write --rsp @cf_wrsp_absent.txt)
 
+# A callback that throws is caught before it reaches C: cf::Live takes
+# callables under C++11, and an exception through cf_live's frames is
+# undefined behaviour (K-9i).
+if("cxx_std_11" IN_LIST CMAKE_CXX_COMPILE_FEATURES)
+  add_executable(test_wrapper_callback test_wrapper_callback.cpp)
+  target_link_libraries(test_wrapper_callback PRIVATE ${CF_TEST_LIB})
+  set_target_properties(
+    test_wrapper_callback
+    PROPERTIES CXX_STANDARD 11
+               CXX_STANDARD_REQUIRED ON
+               CXX_EXTENSIONS OFF)
+  if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang|AppleClang")
+    target_compile_options(test_wrapper_callback PRIVATE -pedantic -Werror
+                                                         -Wall -Wextra)
+  elseif(MSVC)
+    configforge_apply_warnings(test_wrapper_callback)
+  endif()
+  configforge_apply_analysis(test_wrapper_callback)
+  add_test(NAME unit.test_wrapper_callback COMMAND test_wrapper_callback)
+endif()
+
 # The same reads under C++17. The header is C++03 but is included by
 # programs on every later standard, and there cf_i64 can be long: the
 # wrapper compiled as C++98 for years and not at all as C++11 on

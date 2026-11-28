@@ -29,6 +29,8 @@ DECL = re.compile(API + r"\s+(.*?)\b([A-Za-z_]\w*)\s*\(", re.DOTALL)
 LINE = re.compile(r"Guarantee:\s*([^.\s]*)")
 BEGIN = "<!-- guarantees:begin -->"
 END = "<!-- guarantees:end -->"
+PBEGIN = "<!-- process:begin -->"
+PEND = "<!-- process:end -->"
 NONLOCAL = [
     "abort",
     "exit",
@@ -241,6 +243,51 @@ def nonlocal_faults(root):
     return faults
 
 
+def ctest_names(root):
+    """The unit tests the tree registers: a name of a CMakeLists.txt or .cmake
+    word that is also a source file of a tests directory (test_x.c, .cpp)."""
+    words = set()
+    for pat in ("CMakeLists.txt", "*.cmake"):
+        for path in glob.glob(os.path.join(root, "**", pat), recursive=True):
+            with open(path, encoding="utf-8", errors="replace") as f:
+                words.update(re.findall(r"test_\w+", f.read()))
+    names = set()
+    for ext in ("c", "cpp"):
+        for path in glob.glob(os.path.join(root, "**", "tests", "**", "test_*." + ext), recursive=True):
+            stem = os.path.splitext(os.path.basename(path))[0]
+            if stem in words:
+                names.add("unit." + stem)
+    return names
+
+
+def process_faults(text, root):
+    """Each row of the table "What holds across a process" ends in a cell of
+    ctest names in backticks; each must be a test the tree registers."""
+    a = text.find(PBEGIN)
+    b = text.find(PEND)
+    if a < 0 or b < a:
+        return [f"{DOC}: markers {PBEGIN} and {PEND} not found"]
+    known = ctest_names(root)
+    faults = []
+    rows = 0
+    for line in text[a:b].split("\n"):
+        cells = [c.strip() for c in line.strip().strip("|").split("|")]
+        if not line.startswith("|") or len(cells) != 3 or set(cells[0]) <= set("- "):
+            continue
+        if cells[0] == "Across":
+            continue
+        rows += 1
+        names = re.findall(r"`([^`]+)`", cells[2])
+        if not names:
+            faults.append(f"{DOC}: {cells[0]}: no test named")
+        for n in names:
+            if n not in known:
+                faults.append(f"{DOC}: {cells[0]}: {n} is not a test")
+    if rows < 4:
+        faults.append(f"{DOC}: the table across a process has {rows} rows, not 4")
+    return faults
+
+
 def main(argv):
     mode = "check"
     fragment = ""
@@ -304,6 +351,8 @@ def main(argv):
     faults += nonlocal_faults(root)
     if not parts or parts[0] + "\n\n" + new_table + "\n\n" + parts[1] != current:
         faults.append(f"{DOC}: the table is not what the headers say: run scripts/check/guarantees.py --write")
+    if current is not None:
+        faults += process_faults(current, root)
     for f in faults:
         print(f)
     if faults:

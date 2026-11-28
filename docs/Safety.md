@@ -24,6 +24,7 @@ claim is never larger than the evidence.
 | **Bounded stacks.** No library function's frame exceeds 2048 bytes, at every optimisation level the presets build. | A deep call chain on a small thread stack is still safe. | `-Wstack-usage`, `scripts/check/stack.cmake`, the `portable` and `minimal` presets |
 | **No global mutable state.** | Two configurations, two threads, two libraries in one process never interfere. | `gate.symbols` (no writable globals) |
 | **Sized structs.** A struct crossing the boundary carries its size, and the library reads and writes only as far as it reaches. | A program and a library of different 1.x releases never overrun each other. | D-51; `CF_STATIC_ASSERT`; the larger-struct checks of `test_live`, `test_report` and Doctor's `test_api` |
+| **What holds across a process is one table, each row a test.** After `fork` the child may read a `cf_config` built before it (`cf_live_*` there is outside the contract); a callback must return, and the bindings catch before C; `cf_file_replace` syncs, renames, then syncs the directory where it can; no descriptor is inherited by `exec`. | A program that forks, throws or loses power knows what is left. | `docs/Guarantees.md`, "What holds across a process"; `test_fork`, `test_wrapper_callback`, `test_writefile`, `test_cloexec` |
 
 ## The tools: what finds what the design missed
 

@@ -22,6 +22,7 @@ set(CF_UNIT_TESTS
     test_writefile
     test_lock
     test_cloexec
+    test_fork
     test_stable
     test_report
     test_image

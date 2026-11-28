@@ -86,6 +86,24 @@ empty.
 An allocation that fails returns `CF_E_MEMORY`, never another code and never a
 crash. That is held at run time by K-9b's tests, not by this gate.
 
+## What holds across a process
+
+The failure guarantees above are about one call. These four are about
+what a call meets outside the library: a `fork`, a callback of the
+caller's, a crash, an `exec`. Each row names the ctest that holds it
+(`gate.guarantees` refuses a name that is not a test).
+
+<!-- process:begin -->
+
+| Across | What holds | Test |
+| ------ | ---------- | ---- |
+| `fork` | The child may read a `cf_config` built before `fork`. `cf_live_*` in the child is outside the contract (not detected: the library keeps no pid, and a check on every call would cost a system call for a case the contract can exclude). | `unit.test_fork` |
+| A callback | A callback must return: an exception, `longjmp` or any other unwinding through the library is outside the contract. The C++ wrapper catches before C (a build that throws is a build that failed; a check that throws refuses and says what was thrown); the Rust and Python bindings do the same before their callbacks reach C. | `unit.test_wrapper_callback` |
+| A crash | `cf_file_replace` writes a temporary beside the file, syncs it, renames it over the file, then syncs the directory where the platform can: POSIX syncs the file with `fsync` and the directory with `fsync` of its descriptor; Windows flushes the file and renames with `MOVEFILE_WRITE_THROUGH`, which has no separate directory sync; `none` has no file writer. A crash leaves the old file or the new, never a part; a temporary a crash left is not read, removed or reused. | `unit.test_writefile` |
+| `exec` | No descriptor the library keeps is inherited: each is close-on-exec (POSIX) or not inheritable (Windows), D-190. | `unit.test_cloexec` |
+
+<!-- process:end -->
+
 ## The table
 
 <!-- guarantees:begin -->

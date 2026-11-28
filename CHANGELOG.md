@@ -7,6 +7,7 @@ nothing: the C interface is not frozen, and a minor bump may change it.
 
 ### Added
 
+- A table in docs/Guarantees.md of what holds across fork, callbacks, a crash and exec, each row with its test; `gate.guarantees` refuses a row naming a test that does not exist (K-9i).
 - `cf_error_set_long`: as `cf_error_set`, with each of the three texts allowed a cap of bytes (0, none) and a text past the old arrays' size held in a block the error owns (M-11b, D-176).
 - An allocator that refuses the nth allocation, swept over every load and write path (`tests/support/cf_oom.h`), and `gate.oom`, which refuses a public load or write function with no sweep case or excuse; `cf_file_options` gains `allocator` (K-9b, D-237).
 - `cf_error.offset` and `cf_error_place_at` (experimental in 2.0): a refusal's byte offset,

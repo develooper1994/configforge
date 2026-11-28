@@ -763,6 +763,7 @@ choices these cards left open were decided on 2026-11-27; D-138
   3. Negative proof: a table row naming a test that does not exist is refused.
 * **accept**: ACCEPT's local runs; `ctest --preset default -R "test_fork|test_cloexec|gate.guarantees"` exit 0.
 * **stop if**: `cf_live_*` does not refuse in a fork's child.
+* **Organiser's answers** (2026-11-28, the organiser, under the maintainer's standing approval): the library cannot tell it is in a fork's child (`git grep -n "fork\|getpid" lib/config/src lib/platform/src` finds nothing), and no pid check is added: it would cost a system call on every `cf_live_*` call for a case the contract can simply exclude. So the fork row says: "the child may read a `cf_config` built before `fork`; `cf_live_*` in the child is outside the contract (not detected)". `test_fork.c` holds only the reading half (the child reads every key and exits 0); the stop above does not apply.
 * **docs**: `CHANGELOG.md`, under the newest unreleased heading, "### Added": "a table in docs/Guarantees.md of what holds across fork, callbacks, a crash and exec, each row with its test".
 
 ## D-223 - One error model (the maintainer, 2026-11-26, relayed from a side session: "I like the error model"; "the core uses the C89 standard")
