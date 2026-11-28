@@ -9,25 +9,24 @@ publishing to crates.io and PyPI is deferred (M-23-m): do not chase it.
 
 ## In flight
 
-1. The batch of K-6a, K-9d, M-11a, K-9e (and its fixes) went to main on
-   2026-11-28 (3db1b2e) after full run 46076732675 was green. Lessons
-   now in docs/Plan.md "The loop", step 11: format, codemap, apiref and
-   every `gate.*` in WSL before each full run, and the MISRA record
-   regenerated after code changes (`cmake -DSRC=<tree> -DBIN=<misra build>
-   "-DDEFINES=-D__GNUC__=15|-D__GNUC_MINOR__=2" -DWRITE=ON -P
-   cmake/gates/GateMisra.cmake`; the helper D:\cf-work\misra-regen.sh is
-   not in the repository).
-2. `batch` (D:\cf-work\batch) holds K-9f (0ea8118), K-9g (c898df5) and
-   K-9b (42dc309, D-237) with the MISRA record after them; local check
-   green (314 tests, gate.misra clean; D:\cf-work\batch-check.sh, not in
-   the repository). Full run 46083844789 started; green -> merge
-   origin/main into batch (documents only) and `git push origin
-   batch:main`. Red -> fix on batch ("Batch: ..."), run again.
+1. On main (5a26c7e, 2026-11-28): K-6a, K-9d, M-11a, K-9e, then K-9f,
+   K-9g and K-9b (D-237), each batch after a green full run (last:
+   46089903557). `batch` equals main; cut the next cards from it.
+2. Before each full run on batch, the organiser's local check in WSL
+   (docs/Plan.md "The loop", step 11, and docs/plan/worker-notes.md):
+   format, codemap, apiref; a default build with every test; a clang
+   build; the `none` and `ubsan-strict` presets; `cmake -DCF_CLANG_TIDY=ON`
+   built; CI's iwyu line (ci.yml, job `iwyu`); and the MISRA record
+   (`cmake --preset misra -B <dir>`, then `cmake -DSRC=<tree> -DBIN=<dir>
+   "-DDEFINES=-D__GNUC__=15|-D__GNUC_MINOR__=2" [-DWRITE=ON] -P
+   cmake/gates/GateMisra.cmake`). K-9b's batch took four red runs for
+   want of these (clang's -Wsign-conversion, none, clang-tidy, iwyu,
+   macOS's aligned image buffer, ubsan-strict's unsigned overflow).
 3. K-9j (written 2026-11-28) takes the two checks K-9b left: a builder
    given its source again after a failed create, and
    `cf_ks_add_candidate`'s partial state.
 4. yamldiff (exploratory, continue-on-error) found an anchor named with
-   `?` alone at the top: card K-8b (2.2.0).
+   `?` alone at the top, and a second `|#` case: both in card K-8b (2.2.0).
 
 ## Next
 
