@@ -38,7 +38,7 @@ UNDECIDED = re.compile(
 )
 EITHER = re.compile(r"\beither\b", re.IGNORECASE)
 CODE = re.compile(r"`[^`\n]*`")
-FENCE = re.compile(r"^ {0,3}(`{3,}|~{3,})")
+FENCE = re.compile(r"^\s*(`{3,}|~{3,})")  # a fence inside a list item is indented further
 CITE = re.compile(
     rf"(?<![\w/.-])(?P<path>{PATH}):(?P<first>\d+)(?:-(?P<last>\d+))?(?!\d)"
 )

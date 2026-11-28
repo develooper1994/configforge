@@ -12,7 +12,7 @@ changes"); a line number below is the tree of 2395d65.
 
 Shared by every card here:
 
-* A new function of the library comes in as `CF_EXPERIMENTAL(1, 9)` (D-89),
+* A new function of the library comes in as `CF_EXPERIMENTAL(2, 1)` (D-89),
   not as `CF_API`: the shape of what a first user needs is often only right
   after it. The card says which names, and `cmake/configforge.experimental.symbols`
   gets them from `cmake -DSRC=. -DWRITE=ON -P cmake/gates/GateAbi.cmake` (the
@@ -49,7 +49,7 @@ Shared by every card here:
   * **A name, not a path.** 1 to 32 bytes of `A-Z a-z 0-9 _ -`. Anything else fails the builder, held for `cf_builder_create` as every builder failure is (`builder_fail`, `config.c:183-189`), code `CF_E_POLICY`, message `cf_builder_app_files: '<text>' is not a profile name: letters, digits, '_' and '-', up to 32` (the text cut at 40 bytes). This is what keeps `--profile ../../etc/x` from naming a file.
   * **Which files.** For each place `cfi_app_places` returns with a profile (C-11: `config.<profile>.<format>` beside each base file, user at `CF_RANK_USER_PROFILE` = 19, system at `CF_RANK_SYS_PROFILE` = 29, and 29 + 3k for the k-th `$XDG_CONFIG_DIRS` entry: every source has a rank of its own, C-11), the source is added as the base files are: name and path the same, `CF_OPTIONAL`. A profile has no `conf.d`. Not one profile file replaces the base: both are read, the profile's wins by rank.
   * **The key is defined for the program.** If `cfi_builder_app_files` ran on a builder, `cf_builder_create` defines `profile` (text, no default, no flags, description `the configuration profile`) when the contract holds no definition of that key, so that `--profile` is never an unknown key under `CF_UNKNOWN_REJECT`. A contract that defines `profile` itself is left alone. The definition goes in right after the `b->failed` check (`config.c:1267-1269`), before `c->defs = b->defs` (`config.c:1297`).
-  * **The library's profile.** `cf_config` gets `const char* profile` (arena copy; NULL when none; `config.c:101-149`). `CF_EXPERIMENTAL(1, 9) const char* cf_profile(const cf_config* c)` returns it (NULL for a NULL `c`, for none). `cf_report` (`config.c:2436-2446`) passes a copy of `info` (a copy of `CF_REPORT_INFO_INIT` when the caller's `info` is NULL) whose `profile` is `c->profile` when the caller's `info` is NULL or its `profile` is NULL; a profile the caller gives wins (a program that names its environments itself is not overridden). `cf_derive` keeps it (`derive_onto`, `config.c:1610-1714`, arena copy, beside `b->track_reads` at 1706).
+  * **The library's profile.** `cf_config` gets `const char* profile` (arena copy; NULL when none; `config.c:101-149`). `CF_EXPERIMENTAL(2, 1) const char* cf_profile(const cf_config* c)` returns it (NULL for a NULL `c`, for none). `cf_report` (`config.c:2436-2446`) passes a copy of `info` (a copy of `CF_REPORT_INFO_INIT` when the caller's `info` is NULL) whose `profile` is `c->profile` when the caller's `info` is NULL or its `profile` is NULL; a profile the caller gives wins (a program that names its environments itself is not overridden). `cf_derive` keeps it (`derive_onto`, `config.c:1610-1714`, arena copy, beside `b->track_reads` at 1706).
   * **Rejected**: several profiles at once (`a,b`): not asked; the order would be a second precedence rule. A profile applying to `conf.d`: a drop-in directory is already the place for per-site overrides. Reading `config.<profile>` with a different format than the base: the format is the one given to `cf_builder_app_files`.
   * **D-120** (to be copied into `docs/Decisions.md` after D-112, with an index row `| D-120 | A profile is a name that adds a file above each base file | configuration, sources | **Decided** |`):
 
@@ -92,7 +92,7 @@ Shared by every card here:
      e. `cf_derive(c, "admin", &pair, 1, &err)` of case b's configuration: `cf_profile(d)` is `prod`.
      f. `--profile=../x`: `cf_builder_create` returns NULL and `err.message` holds `is not a profile name`; the same for the environment spelling.
      g. A contract that defines `profile` itself (`cf_builder_text(b, "profile", "dev", 0)` before `cfi_builder_app_files`): the build succeeds and `cf_get_text(c, "profile", "")` is `dev` when no profile is given.
-  3. Add the declarations and bodies that do nothing: `cfi_app_profile` returning 0, `cf_profile` returning NULL (in `cf_source.h` under `#if CF_INTERNAL_API` as `CF_API int cfi_app_profile(int argc, char* const* argv, char* const* environment, const char* prefix, char* out, size_t cap)`, and in `configforge.h` after `cf_builder_app_files` as `CF_EXPERIMENTAL(1, 9) const char* cf_profile(const cf_config* c);`), so that the test links. **See it fail**: `ctest --test-dir build -R test_profile --output-on-failure` exits non-zero and names the failing checks of a, b, c, d, e, f and g.
+  3. Add the declarations and bodies that do nothing: `cfi_app_profile` returning 0, `cf_profile` returning NULL (in `cf_source.h` under `#if CF_INTERNAL_API` as `CF_API int cfi_app_profile(int argc, char* const* argv, char* const* environment, const char* prefix, char* out, size_t cap)`, and in `configforge.h` after `cf_builder_app_files` as `CF_EXPERIMENTAL(2, 1) const char* cf_profile(const cf_config* c);`), so that the test links. **See it fail**: `ctest --test-dir build -R test_profile --output-on-failure` exits non-zero and names the failing checks of a, b, c, d, e, f and g.
   4. `cfi_app_profile` in `appfiles.c` as decided (statics prefixed `appf_`, as C-11's are).
   5. `config.c`: `b->profile_key` (cf_bool) and `b->profile` (arena copy) on `cf_builder`; `cfi_builder_app_files` (C-11) calls `cfi_app_profile` first, fails the builder on -1, passes the name (or NULL) to `cfi_app_places`, sets `b->profile_key`, `b->profile`; `cf_builder_create` defines `profile` and copies `b->profile` to `c->profile` (right after `c->defs = b->defs`); `derive_onto` copies the base's; `cf_profile`; `cf_report` as decided.
   6. `ctest --test-dir build -R test_profile` exits 0; `ctest --test-dir build -R "test_appfiles|test_rename|test_report|test_derive"` still exit 0.
@@ -112,7 +112,7 @@ Shared by every card here:
 * **version**: 2.1.0
 * **status**: open
 * **decided**:
-  * **Opt-in.** `CF_EXPERIMENTAL(1, 9) void cf_builder_track_misreads(cf_builder* b)`, beside `cf_builder_track_reads` (`configforge.h:521`); `CF_EXPERIMENTAL(1, 9) cf_bool cf_tracks_misreads(const cf_config* c)`. Off by default: a read costs one pointer test more (`c->misreads != NULL`) and nothing else. Tracking reads and tracking misreads are independent. A derived configuration tracks as its base did (`derive_onto`, `config.c:1737`, beside `track_reads`); the log it makes starts empty.
+  * **Opt-in.** `CF_EXPERIMENTAL(2, 1) void cf_builder_track_misreads(cf_builder* b)`, beside `cf_builder_track_reads` (`configforge.h:521`); `CF_EXPERIMENTAL(2, 1) cf_bool cf_tracks_misreads(const cf_config* c)`. Off by default: a read costs one pointer test more (`c->misreads != NULL`) and nothing else. Tracking reads and tracking misreads are independent. A derived configuration tracks as its base did (`derive_onto`, `config.c:1737`, beside `track_reads`); the log it makes starts empty.
   * **What is a misread.** A read through `cf_get_bool`, `cf_get_int`, `cf_get_text`, `cf_get_text_n`, `cf_get_real`, `cf_try_bool`, `cf_try_int`, `cf_try_text`, `cf_try_real` (the last under `CF_WITH_REAL`), with `want` the type it asks for, of `key`; not `cf_has`, `cf_type_of`, `cf_explain`, `cf_report`, the iterator or `cf_derive`: those ask what is there, not for a value. In this order:
     1. `d = cf_defset_find(&c->defs, key, keylen)` is NULL, the configuration holds at least one definition (`c->defs.count > 0`: with no contract there is nothing to misread) and `cf_defset_is_open(&c->defs, key, keylen)` is false: kind `CF_MISREAD_UNDEFINED`, `found` = `CF_TYPE_NULL`. A key a source supplied and the contract does not define counts: the contract is what the program asked for.
     2. Otherwise, with `v` the selected value (`e->selected->value`) when there is one: `v` present and `v->type != want`, or `v` absent and `d != NULL` and `d->list_mode == CF_LIST_NONE` and `d->type != want`: kind `CF_MISREAD_TYPE`, `found` = `v->type` or `d->type`. This holds with a contract or without one (Tier 0 infers the type: `{"port", "9000"}` is an int, and `cf_get_text(c, "port", "")` is a misread).
@@ -120,8 +120,8 @@ Shared by every card here:
   * **The public reading.**
     ```c
     typedef enum cf_misread_kind { CF_MISREAD_UNDEFINED = 1, CF_MISREAD_TYPE = 2 } cf_misread_kind;
-    CF_EXPERIMENTAL(1, 9) size_t cf_misreads(const cf_config* c);
-    CF_EXPERIMENTAL(1, 9) cf_bool cf_misread_at(const cf_config* c, size_t i, const char** key,
+    CF_EXPERIMENTAL(2, 1) size_t cf_misreads(const cf_config* c);
+    CF_EXPERIMENTAL(2, 1) cf_bool cf_misread_at(const cf_config* c, size_t i, const char** key,
                                                 cf_misread_kind* kind, cf_type* wanted,
                                                 cf_type* found);
     ```
@@ -352,11 +352,11 @@ Shared by every card here:
         long                  timeout_ms; /* each wait; negative: no limit */
     } cf_serve_options;
     #define CF_SERVE_OPTIONS_INIT {sizeof(cf_serve_options), NULL, 2000}
-    CF_EXPERIMENTAL(1, 9) cf_bool cf_serve_report(const cf_config* c, int fd,
+    CF_EXPERIMENTAL(2, 1) cf_bool cf_serve_report(const cf_config* c, int fd,
                                                   const cf_serve_options* opt,
                                                   cf_error* err);
     ```
-    `opt` NULL means `CF_SERVE_OPTIONS_INIT`; a size below the 1.9 struct is refused as `cf_report_info`'s is (D-51): `CF_FALSE`, `CF_E_CAPABILITY`, `cf_serve_report: options did not start from CF_SERVE_OPTIONS_INIT`. The report is always `CF_REPORT_BLIND`: an `opt->info` whose `mode` is `CF_REPORT_FULL` is refused (`CF_FALSE`, `CF_E_POLICY`, `cf_serve_report: a report served on a descriptor is value-blind`); a full report holds every secret and a socket may be reached by whoever its path lets (decided here, not an option).
+    The defaults (`CF_SERVE_OPTIONS_INIT`): `info` NULL, `timeout_ms` 2000. `opt` NULL means `CF_SERVE_OPTIONS_INIT`; a size below the 2.1 struct is refused as `cf_report_info`'s is (D-51): `CF_FALSE`, `CF_E_CAPABILITY`, `cf_serve_report: options did not start from CF_SERVE_OPTIONS_INIT`. The report is always `CF_REPORT_BLIND`: an `opt->info` whose `mode` is `CF_REPORT_FULL` is refused (`CF_FALSE`, `CF_E_POLICY`, `cf_serve_report: a report served on a descriptor is value-blind`); a full report holds every secret and a socket may be reached by whoever its path lets (decided here, not an option).
   * **What it does.** The descriptor is a connected stream socket (`AF_UNIX` or `AF_INET`); it is made non-blocking for the call and its flags restored before return. It reads the request until the blank line that ends the headers (`\r\n\r\n` or `\n\n`) or 4096 bytes, each wait at most `timeout_ms`; answers; and returns. The program closes the descriptor. It never accepts, listens, binds, reads a body or keeps anything between calls: **no thread, no state** (D-14).
   * **The wire: an HTTP/1.0 subset, so that `curl --unix-socket /run/myapp.sock http://x/report` works.** The request line is `METHOD SP TARGET SP HTTP/1.x`:
     * `GET /report`: `200 OK`, `Content-Type: application/json`, `Content-Length: <n>`, `Cache-Control: no-store`, `Connection: close`, the report (`cf_report` with `opt->info`, blind) as the body;
@@ -464,7 +464,7 @@ Shared by every card here:
 * **decided**:
   * **The function** (`configforge.h`, after `cf_builder_response_files`, line 126; the comment at lines 65-69, "cf_app reads no file. For files, start from cf_app_builder...", gains "or call cf_builder_app_files, which reads the platform's places"):
     ```c
-    CF_EXPERIMENTAL(1, 9) cf_bool cf_builder_app_files(cf_builder* b, const char* name,
+    CF_EXPERIMENTAL(2, 1) cf_bool cf_builder_app_files(cf_builder* b, const char* name,
                                                        const char* format);
     ```
     Returns `CF_FALSE` for a NULL or failed builder; a refusal fails the builder as every builder call does (`builder_fail`, `config.c:183-189`), code `CF_E_POLICY`. Opt-in: `cf_app` stays as D-09 has it.
