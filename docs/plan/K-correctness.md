@@ -521,6 +521,7 @@ choices these cards left open were decided on 2026-11-27; D-138
 * **stop if**: the events show something neither branch covers (write them under notes; a design question).
 * **docs**: the rule's reason, or `CHANGELOG.md` "### Fixed" when the parser changes.
 * **notes**: the input, hex: `0a 26 2d 2d 2d 2d 2d 2d 2d 2d 2d 2d 3f 2d 2d 2d 0a`.
+  * A second yamldiff finding (full run 46087822464, 2026-11-28), side `bi-refuses`, the same cause as the rule added on 2026-11-28 for `d: |#` (a comment glued to a block scalar's header, YAML 1.2 8.1.1 and 6.6): the line `motd: |# commesnga: b` is refused with "a mapping cannot start on this line: a value with ': ' in it is quoted", because the check for a second `: ` runs before the block scalar's header is read. This card also takes it: the header is read first (so the refusal is the header's message, which `tests/fuzz/yamldiff.known` already documents), with a test of that line in the YAML reader's tests. Base64: `IyA4b21tZW50IyBjb21tZXNuZ2E6IGIjCToge29uCm5vdGhpbmc6IH4KbW90ZDogfCMgY29tbWVzbmdhOiBiCiAgdHdvIGRjZQ==`.
 
 ## K-9a - Three failure guarantees: written in every public function's header comment, listed in a table, and held by `gate.guarantees`
 
