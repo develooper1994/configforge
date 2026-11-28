@@ -19,13 +19,18 @@ the variable PUBLISH_CRATES is unset): do not chase it.
 
 ## In flight
 
-3. On `batch` ahead of main, no full run yet: (the worktree is D:/cf-work/batch)
-   "Open 2.1.0", L-28 (CERT matrix, D-236), K-9k (a3bc664, strerror
-   replaced, D-239) and 3411f27 (`cf_error_place_at` promoted to CF_API:
-   opening 2.1.0 made gate.abi refuse a 2.0 experimental name, D-89).
-   Next: the organiser's local check (item 6; regenerate the MISRA record
-   with WRITE=ON, platform files moved), a full run, then
-   `git push origin <green hash>:main`.
+3. On main (green full run 46127137724 at 8237384, 2026-11-28): "Open
+   2.1.0", L-28 (D-236), K-9k (D-239), `cf_error_place_at` promoted
+   (D-89), the size record and README's table after M-11b, gate.cert
+   holding clang-tidy names only at version 22 or newer. Card fixes after
+   it: M-35 (card ids as links, the maintainer's ask), ready.py reading
+   indented fences, open cards as CF_EXPERIMENTAL(2, 1).
+   The maintainer (2026-11-28): features first; cards land in groups
+   (several on batch, each with its local ACCEPT, then one full run).
+   Group now: L-25 (with a worker in D:/cf-work/L-25), M-35, C-2a, C-8a,
+   C-9, C-10a, F-1b; then Y-42, Y-1 and the qemu cards L-17, L-19a, L-19b
+   (L-17-m opens after L-17 is green). C-7 and C-11 need each other: one
+   of the two `needs` is wrong, settle it before either.
 4. Release 46113423729 was green (crates skipped). If one is ever red: read its failed job, fix
    on batch, and re-tag only by deleting and pushing v2.0.0 again once the
    fix is on main (no release was made then); if green, nothing to do.
