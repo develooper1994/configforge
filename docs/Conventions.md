@@ -121,7 +121,10 @@ cf_bool cf_error_set(cf_error* e, cf_code code, const char* key,
 * The struct is caller-supplied and fixed-size: not a thread-local
   last-error, because global error state contradicts a stated principle;
   not an allocation, because the failure path has to work in the
-  fixed-capacity profile, which is where allocation fails.
+  fixed-capacity profile, which is where allocation fails. The texts live
+  in the struct (D-176); only `cf_error_set_long` and `cf_error_copy` may
+  take a block for a text past it, and a build with `CF_FIXED_LIMITS`
+  never does. A `cf_error` is never copied by value: use `cf_error_copy`.
 * A message names **the value, the bound and the place to fix it**.
   `server.port: 99999 is outside 1..65535` with `set at: argv[1]` is the
   standard to hold to.

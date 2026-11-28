@@ -128,8 +128,8 @@ static void test_auto_and_manual(void) {
     check(strcmp(level(l, buf, sizeof buf), "debug") == 0 && cf_live_generation(l) == 2,
           "and the running snapshot stays");
 
-    g_pairs        = g_trace;
-    err.message[0] = '\0';
+    g_pairs = g_trace;
+    cf_error_clear(&err);
     check(cf_live_reload(l, &err) == CF_LIVE_FAILED &&
               strstr(err.message, "trace") != NULL,
           "a check refuses, saying why");
@@ -224,7 +224,7 @@ static void test_approve(void) {
     g_pairs = g_info;
     l       = cf_live_open(CF_LIVE_AUTO, build, refuse_quietly, NULL, NULL, &err);
     g_pairs = g_debug;
-    err.message[0] = '\0';
+    cf_error_clear(&err);
     check(l != NULL && cf_live_reload(l, &err) == CF_LIVE_FAILED &&
               err.message[0] != '\0',
           "a check that refuses without a reason still gives one");

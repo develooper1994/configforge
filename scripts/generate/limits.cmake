@@ -246,8 +246,10 @@ function(cf_limits_section2 out)
       "read from `${options}`, `${buildh}` and `${porth}`, and the build fails "
       "if the three disagree.\n\n${table}\n`CF_KEY_MAX`, `CF_MESSAGE_MAX` "
       "and `CF_SOURCE_MAX` size `cf_error`'s "
-      "buffers and so belong to a build's ABI (D-45): `cf_build_limit()` says "
-      "which numbers a library was built with.\n")
+      "inline text store and so belong to a build's ABI (D-45): "
+      "`cf_build_limit()` says which numbers a library was built with. A text "
+      "past the store lives in a block the error owns (D-176): `cf_error_set` "
+      "still cuts at these limits and `cf_error_set_long` does not.\n")
   # cmake-lint: disable=C0103
   set("${out}"
       "${text}"

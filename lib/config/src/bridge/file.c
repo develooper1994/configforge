@@ -393,9 +393,9 @@ static void file_hint(file_state* st, const cf_codec* tried, const cf_blob* blob
     if (like == NULL || like == tried) {
         return;
     }
-    memcpy(message, st->err.message, sizeof message);
-    memcpy(key, st->err.key, sizeof key);
-    memcpy(source, st->err.source, sizeof source);
+    cf_fmt(message, sizeof message, "%s", st->err.message);
+    cf_fmt(key, sizeof key, "%s", st->err.key);
+    cf_fmt(source, sizeof source, "%s", st->err.source);
     cf_error_set(&st->err, (cf_code)code, key[0] != '\0' ? key : NULL,
                  source[0] != '\0' ? source : NULL, "%s (the content looks like %s)",
                  message, like->name);

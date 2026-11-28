@@ -181,12 +181,15 @@ static void codecs_copy(const cf_codec** to, const cf_codec* const* from, size_t
     }
 }
 
-static void builder_fail(cf_builder* b, const cf_error* e) {
-    if (b->failed) {
-        return; /* the first failure is the useful one */
+/* The first failure is kept, as a copy that the builder holds until
+   create reports it; `e` is cleared either way, since a text of its own
+   would have no one to release it. */
+static void builder_fail(cf_builder* b, cf_error* e) {
+    if (!b->failed) { /* the first failure is the useful one */
+        b->failed = CF_TRUE;
+        cf_error_copy(&b->pending, e);
     }
-    b->failed  = CF_TRUE;
-    b->pending = *e;
+    cf_error_clear(e);
 }
 
 static cf_builder* builder_on(cf_arena* ar, cf_bool owns) {
@@ -1355,8 +1358,13 @@ static const char* config_name_of_rank(const void* ctx, int rank) {
     return NULL;
 }
 
-static cf_config* create_failed(cf_builder* b, cf_error* err, const cf_error* what) {
+/* `own`, when not NULL, is the error `what` is (the builder's pending one or
+   a local): it is cleared, since the builder's arena would not release a
+   long text it held. */
+static cf_config* create_failed(cf_builder* b, cf_error* err, const cf_error* what,
+                                cf_error* own) {
     cf_error_copy(err, what);
+    cf_error_clear(own);
     if (b->owns_arena) {
         cf_arena_free(b->arena);
     }
@@ -1377,7 +1385,7 @@ cf_config* cf_builder_create(cf_builder* b, cf_error* err) {
         return NULL;
     }
     if (b->failed) {
-        return create_failed(b, err, &b->pending);
+        return create_failed(b, err, &b->pending, &b->pending);
     }
 
     c = (cf_config*)cf_arena_calloc(b->arena, sizeof(cf_config));
@@ -1403,7 +1411,7 @@ cf_config* cf_builder_create(cf_builder* b, cf_error* err) {
     }
     if (c == NULL) {
         cf_error_set(&e, CF_E_MEMORY, NULL, NULL, "no room for the config");
-        return create_failed(b, err, &e);
+        return create_failed(b, err, &e, &e);
     }
     c->arena = b->arena;
     c->defs  = b->defs;
@@ -1434,7 +1442,7 @@ cf_config* cf_builder_create(cf_builder* b, cf_error* err) {
                              "'%s' is granted writing, and a %s source cannot be "
                              "written: a running program's changes go to a store",
                              s->name, (s->vt != NULL) ? s->vt->kind : "?");
-                return create_failed(b, err, &e);
+                return create_failed(b, err, &e, &e);
             }
             c->writable[k] = CF_TRUE;
         }
@@ -1442,7 +1450,7 @@ cf_config* cf_builder_create(cf_builder* b, cf_error* err) {
             cf_error_set(&e, CF_E_POLICY, NULL, b->writable[i],
                          "'%s' is granted writing, and no source has that name",
                          b->writable[i]);
-            return create_failed(b, err, &e);
+            return create_failed(b, err, &e, &e);
         }
     }
 
@@ -1487,7 +1495,7 @@ cf_config* cf_builder_create(cf_builder* b, cf_error* err) {
 
     if (!cf_ks_init(&c->keys, c->arena, 64)) {
         cf_error_set(&e, CF_E_MEMORY, NULL, NULL, "no room for the key space");
-        return create_failed(b, err, &e);
+        return create_failed(b, err, &e, &e);
     }
     cfi_ks_expect(&c->keys, b->expect); /* a reload's guess; zero for none */
     config_ks_sizing(&c->keys, &c->defs);
@@ -1504,7 +1512,7 @@ cf_config* cf_builder_create(cf_builder* b, cf_error* err) {
             !cf_source_load(&snap, &c->keys)) {
             cf_error_set(&e, CF_E_MEMORY, NULL, NULL,
                          "no room for the inherited configuration");
-            return create_failed(b, err, &e);
+            return create_failed(b, err, &e, &e);
         }
     }
 
@@ -1543,17 +1551,17 @@ cf_config* cf_builder_create(cf_builder* b, cf_error* err) {
                 detail = cfi_source_preferences_error(&c->sources[i]);
             }
             if (detail != NULL) {
-                return create_failed(b, err, detail);
+                return create_failed(b, err, detail, NULL);
             }
             if (cfi_arena_refused(c->arena)) {
                 /* The source had no reason of its own: it ran out of room. */
                 cf_error_set(&e, CF_E_MEMORY, NULL, c->sources[i].name,
                              "no room to read source '%s'", c->sources[i].name);
-                return create_failed(b, err, &e);
+                return create_failed(b, err, &e, &e);
             }
             cf_error_set(&e, CF_E_SOURCE, NULL, c->sources[i].name,
                          "source '%s' could not be read", c->sources[i].name);
-            return create_failed(b, err, &e);
+            return create_failed(b, err, &e, &e);
         }
     }
 
@@ -1583,7 +1591,7 @@ cf_config* cf_builder_create(cf_builder* b, cf_error* err) {
                 if (p == NULL) {
                     cf_error_set(&e, CF_E_MEMORY, NULL, NULL,
                                  "no room for the watched files");
-                    return create_failed(b, err, &e);
+                    return create_failed(b, err, &e, &e);
                 }
                 c->watch_paths[c->watch_count]  = p;
                 c->watch_stamps[c->watch_count] = o->watch_stamps[i];
@@ -1609,14 +1617,14 @@ cf_config* cf_builder_create(cf_builder* b, cf_error* err) {
         if (!renamed) {
             cf_error_set(&e, CF_E_MEMORY, d->key, NULL, "no room to rename '%s'",
                          d->key);
-            return create_failed(b, err, &e);
+            return create_failed(b, err, &e, &e);
         }
     }
 
     if (!cf_ks_resolve(&c->keys)) {
         cf_error_set(&e, CF_E_MEMORY, NULL, NULL, "no room to resolve %u candidates",
                      (unsigned)cf_ks_candidate_count(&c->keys));
-        return create_failed(b, err, &e);
+        return create_failed(b, err, &e, &e);
     }
 
     /* Conversion, validation and Tier 0 inference, in that order and
@@ -1654,7 +1662,7 @@ cf_config* cf_builder_create(cf_builder* b, cf_error* err) {
                          "the policy for '%s' names only %s, and this build "
                          "has none of them, so nothing could ever set it",
                          d->key, list);
-            return create_failed(b, err, &e);
+            return create_failed(b, err, &e, &e);
         }
     }
 
@@ -1663,7 +1671,7 @@ cf_config* cf_builder_create(cf_builder* b, cf_error* err) {
         names.name_of = config_name_of_rank;
         names.ctx     = &c->sv;
         if (!cf_defs_apply(&c->keys, &c->defs, &names, b->unknown, &c->report, &e)) {
-            return create_failed(b, err, &e);
+            return create_failed(b, err, &e, &e);
         }
     }
     /* After the definitions, which may add keys. One more than the
@@ -1673,7 +1681,7 @@ cf_config* cf_builder_create(cf_builder* b, cf_error* err) {
                                                                sizeof(cf_refcount));
         if (c->reads == NULL) {
             cf_error_set(&e, CF_E_MEMORY, NULL, NULL, "no room to track reads");
-            return create_failed(b, err, &e);
+            return create_failed(b, err, &e, &e);
         }
     }
     config_log_events(c);

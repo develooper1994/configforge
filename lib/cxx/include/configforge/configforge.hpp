@@ -110,13 +110,26 @@ namespace configforge {
  * Error
  * ------------------------------------------------------------------ */
 
+/* Owns the text of its cf_error (D-176): a copy goes through cf_error_copy,
+   never by value, because the texts may point into the struct itself. */
 class Error {
   public:
-    Error() {
-        e_.size = sizeof(cf_error);
-        cf_error_clear(&e_);
+    Error() : e_(fresh()) {
     }
-    explicit Error(const cf_error& e) : e_(e) {
+    explicit Error(const cf_error& e) : e_(fresh()) {
+        cf_error_copy(&e_, &e);
+    }
+    Error(const Error& o) : e_(fresh()) {
+        cf_error_copy(&e_, &o.e_);
+    }
+    Error& operator=(const Error& o) {
+        if (this != &o) {
+            cf_error_copy(&e_, &o.e_);
+        }
+        return *this;
+    }
+    ~Error() {
+        cf_error_clear(&e_);
     }
 
     int code() const {
@@ -158,6 +171,13 @@ class Error {
     }
 
   private:
+    /* A cleared error holds nothing of its own, so it may be returned and
+       copied by value once, to start `e_`. */
+    static cf_error fresh() {
+        cf_error e = CF_ERROR_INIT;
+        return e;
+    }
+
     cf_error e_;
 };
 

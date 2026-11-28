@@ -37,9 +37,16 @@ class cf_error(Structure):
     _fields_ = [
         ("size", c_size_t),
         ("code", c_int),
-        ("key", c_char * KEY_MAX),
-        ("source", c_char * SOURCE_MAX),
-        ("message", c_char * MESSAGE_MAX),
+        # The texts are owned by the error (D-176): pointers, "" or NULL when
+        # unset, into the inline store behind them. This struct ends at
+        # `reason`, so its `size` does not reach the library's blocks for long
+        # texts: every text is inline and cut at the store's size.
+        ("key", c_void_p),
+        ("source", c_void_p),
+        ("message", c_void_p),
+        ("store_key", c_char * KEY_MAX),
+        ("store_source", c_char * SOURCE_MAX),
+        ("store_message", c_char * MESSAGE_MAX),
         ("where_file", c_void_p),
         ("where_line", c_uint),
         ("where_col", c_uint),
@@ -344,6 +351,11 @@ def encode(s: str | None) -> bytes | None:
 
 def decode(b: bytes | None) -> str:
     return "" if not b else b.decode("utf-8", "replace")
+
+
+def error_text(p: int | None) -> str:
+    """One of a cf_error's texts: its pointer, NULL or "" when unset."""
+    return "" if not p else decode(ctypes.string_at(p))
 
 
 def render(call) -> str:

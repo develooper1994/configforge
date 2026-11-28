@@ -1,6 +1,7 @@
 # Public functions whose result may be dropped. One line: name|reason.
 # scripts/check/nodiscard.py (gate.nodiscard).
 cf_error_set|returns CF_FALSE so that a caller may write return cf_error_set(...); dropping it loses nothing
+cf_error_set_long|returns CF_FALSE so that a caller may write return cf_error_set_long(...); dropping it loses nothing
 cf_builder_bool|the first failure is deferred to cf_builder_create, so a definition block need not check each call (configforge.h, "Tier 1 and 2")
 cf_builder_cli|the first failure is deferred to cf_builder_create, so a definition block need not check each call (configforge.h, "Tier 1 and 2")
 cf_builder_codec|the first failure is deferred to cf_builder_create, so a definition block need not check each call (configforge.h, "Tier 1 and 2")

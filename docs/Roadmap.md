@@ -42,7 +42,7 @@ beside what is not.
 | 🟩 | A format of one's own, on the builder | D-68 |
 | 🟩 | The built-in YAML reader, on by default | D-69 |
 | 🟩 | TOML 1.1.0 | Formats.md |
-| 🟨 | Sizing: transient file bytes done; stream and dynamic modes for 2.0 | D-61 |
+| 🟩 | Sizing: transient file bytes done; stream and dynamic modes for 2.0 | D-61 |
 | 🟩 | Every C++ standard from C++98, cumulatively | D-72 |
 | 🟩 | The Rust crate built by cargo and the `cc` crate | D-70 |
 | 🟩 | `cf_diff_json`, the settle interval, limits in the report | CHANGELOG 1.3.0 |

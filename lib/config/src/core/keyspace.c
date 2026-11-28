@@ -128,6 +128,17 @@ void cfi_ks_limits(cf_keyspace* ks, size_t key_limit, size_t text_limit) {
     }
 }
 
+/* `s` as the arena holds it, "" when there is none or no room. */
+static const char* refuse_text(const cf_keyspace* ks, const char* s) {
+    const char* dup;
+
+    if (s == NULL || s[0] == '\0') {
+        return "";
+    }
+    dup = cf_arena_dup(ks->arena, s, strlen(s));
+    return (dup != NULL) ? dup : "";
+}
+
 void cfi_ks_refuse(cf_keyspace* ks, const cf_error* err) {
     cf_error* copy;
 
@@ -139,9 +150,15 @@ void cfi_ks_refuse(cf_keyspace* ks, const cf_error* err) {
     if (copy == NULL) {
         return;
     }
+    /* The arena releases this copy and cannot release a block of its own
+       that a long text would take: the texts go into the arena too. */
     memset(copy, 0, sizeof *copy);
-    copy->size = sizeof(cf_error);
-    cf_error_copy(copy, err);
+    copy->size    = sizeof(cf_error);
+    copy->code    = err->code;
+    copy->key     = refuse_text(ks, err->key);
+    copy->source  = refuse_text(ks, err->source);
+    copy->message = refuse_text(ks, err->message);
+    cf_error_place_at(copy, err->reason, err->where.line, err->where.col, err->offset);
     ks->refusal = copy;
 }
 
@@ -501,6 +518,19 @@ cf_bool cf_ks_replay(cf_keyspace* ks, const cf_keyspace* base) {
     return CF_TRUE;
 }
 
+/* An error that names a key or a place, held to the sizing mode: MANUAL
+   as cf_error_set always cut it, SEMI and DYNAMIC with each text allowed the
+   mode's cap, so that a key the mode let in is kept whole. */
+static cf_bool ks_fail(const cf_keyspace* ks, cf_error* err, cf_code code,
+                       const char* key, const char* at, const char* text) {
+    if (ks->key_limit == 0) {
+        return cf_error_set(err, code, key, at, "%s", text);
+    }
+    return cf_error_set_long(err, code, key, at,
+                             (ks->key_limit == (size_t)-1) ? 0u : ks->key_limit, "%s",
+                             text);
+}
+
 cf_bool cf_ks_append_list(cf_keyspace* ks, const char* key, size_t keylen,
                           const cf_list_part* parts, size_t count,
                           const cf_candidate* result, cf_error* err) {
@@ -514,8 +544,8 @@ cf_bool cf_ks_append_list(cf_keyspace* ks, const char* key, size_t keylen,
     if (keylen + 22u >= room && cfi_ks_key_limit(ks) >= room) {
         renamed = (char*)cf_arena_alloc(ks->arena, keylen + 23u);
         if (renamed == NULL) {
-            return cf_error_set(err, CF_E_MEMORY, key, NULL,
-                                "no room for appended list keys");
+            return ks_fail(ks, err, CF_E_MEMORY, key, NULL,
+                           "no room for appended list keys");
         }
         room = keylen + 23u;
     }
@@ -535,8 +565,8 @@ cf_bool cf_ks_append_list(cf_keyspace* ks, const char* key, size_t keylen,
         }
         if (!cf_value_from_text(CF_TYPE_INT, r->key + keylen + 1,
                                 r->keylen - keylen - 1, &number)) {
-            return cf_error_set(err, CF_E_KEY, r->key, r->cand.at,
-                                "list index is not a nonnegative integer");
+            return ks_fail(ks, err, CF_E_KEY, r->key, r->cand.at,
+                           "list index is not a nonnegative integer");
         }
         index = number.u.i;
         if (!parts[j].included || index >= parts[j].length) {
@@ -548,22 +578,22 @@ cf_bool cf_ks_append_list(cf_keyspace* ks, const char* key, size_t keylen,
         }
         if (parts[j].included && index < parts[j].length && parts[j].offset != 0) {
             if (index > CF_I64_MAX - parts[j].offset) {
-                return cf_error_set(err, CF_E_KEY, r->key, r->cand.at,
-                                    "appended list index overflows");
+                return ks_fail(ks, err, CF_E_KEY, r->key, r->cand.at,
+                               "appended list index overflows");
             }
             n = cf_fmt(renamed, room, "%S.%I", key, keylen, index + parts[j].offset);
             if (n >= room || n > cfi_ks_key_limit(ks)) {
-                return cf_error_set(err, CF_E_KEY, r->key, r->cand.at,
-                                    "appended list index exceeds the key limit");
+                return ks_fail(ks, err, CF_E_KEY, r->key, r->cand.at,
+                               "appended list index exceeds the key limit");
             }
             if (!cf_ks_remember_original(ks, i, r->key)) {
-                return cf_error_set(err, CF_E_MEMORY, key, NULL,
-                                    "no room for original list keys");
+                return ks_fail(ks, err, CF_E_MEMORY, key, NULL,
+                               "no room for original list keys");
             }
             r->key = cf_arena_dup(ks->arena, renamed, n);
             if (r->key == NULL) {
-                return cf_error_set(err, CF_E_MEMORY, key, NULL,
-                                    "no room for appended list keys");
+                return ks_fail(ks, err, CF_E_MEMORY, key, NULL,
+                               "no room for appended list keys");
             }
             r->keylen = n;
         }
@@ -579,8 +609,8 @@ cf_bool cf_ks_append_list(cf_keyspace* ks, const char* key, size_t keylen,
                     "appended permitted source lists, lowest precedence first",
                     (result->flags & (CF_CAND_DEFAULT | CF_CAND_PINNED)) |
                         CF_CAND_LIST_RESULT)) {
-        return cf_error_set(err, CF_E_MEMORY, key, NULL,
-                            "no room for appended list count");
+        return ks_fail(ks, err, CF_E_MEMORY, key, NULL,
+                       "no room for appended list count");
     }
     return CF_TRUE;
 }

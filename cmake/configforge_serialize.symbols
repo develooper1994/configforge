@@ -40,6 +40,7 @@ cf_error_clear
 cf_error_copy
 cf_error_place
 cf_error_set
+cf_error_set_long
 cf_file_options_init
 cf_file_replace
 cf_file_writer_close

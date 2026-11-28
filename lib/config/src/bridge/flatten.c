@@ -725,6 +725,19 @@ static cf_bool emit_table(const cf_keyspace* ks, const cf_doc_sink* out, size_t 
 static cf_bool emit_array(const cf_keyspace* ks, const cf_doc_sink* out, size_t lo,
                           size_t hi, size_t plen, int depth, cf_error* err);
 
+/* An error whose message holds a key, held to the sizing mode as
+   cf_error_set holds it under MANUAL and cf_error_set_long under SEMI
+   and DYNAMIC (D-176). */
+static cf_bool fl_key_fail(const cf_keyspace* ks, cf_error* err, cf_code code,
+                           const char* key, const char* fmt, const char* arg) {
+    if (ks->key_limit == 0) {
+        return cf_error_set(err, code, key, NULL, fmt, arg);
+    }
+    return cf_error_set_long(err, code, key, NULL,
+                             (ks->key_limit == (size_t)-1) ? 0u : ks->key_limit, fmt,
+                             arg);
+}
+
 static cf_bool too_deep(cf_error* err) {
     return cf_error_set(err, CF_E_KEY, NULL, NULL,
                         "the document nests deeper than %d levels", CF_EMIT_MAX_DEPTH);
@@ -792,8 +805,7 @@ static cf_bool emit_table(const cf_keyspace* ks, const cf_doc_sink* out, size_t 
         }
         if (!out->scalar(out->ctx, e->key + plen, n, &e->selected->value, CF_FALSE,
                          NULL)) {
-            return cf_error_set(err, CF_E_SOURCE, NULL, NULL, "sink refused '%s'",
-                                e->key);
+            return fl_key_fail(ks, err, CF_E_SOURCE, NULL, "sink refused '%s'", e->key);
         }
     }
 
@@ -821,9 +833,9 @@ static cf_bool emit_table(const cf_keyspace* ks, const cf_doc_sink* out, size_t 
             {
                 const cf_entry* value = cf_ks_find(ks, e->key, plen + n);
                 if (value != NULL && included(f, value)) {
-                    return cf_error_set(err, CF_E_KEY, value->key, NULL,
-                                        "key '%s' is both a value and a container",
-                                        value->key);
+                    return fl_key_fail(ks, err, CF_E_KEY, value->key,
+                                       "key '%s' is both a value and a container",
+                                       value->key);
                 }
             }
             if (!emit_group(ks, out, i, j, plen, n, is_array, CF_FALSE, depth, f,

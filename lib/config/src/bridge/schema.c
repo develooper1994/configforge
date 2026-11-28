@@ -597,8 +597,7 @@ static cf_bool sw_leaf(const swalk* w, const snode* s, const char* key,
     if (!cf_define(w->ds, &d, w->err)) {
         /* The definition's own refusal, with the schema's place first. */
         char why[CF_MESSAGE_MAX];
-        memcpy(why, w->err->message, sizeof why);
-        why[sizeof why - 1] = '\0';
+        cf_fmt(why, sizeof why, "%s", w->err->message);
         return sw_fail(w, s, why, NULL, 0);
     }
     return CF_TRUE;

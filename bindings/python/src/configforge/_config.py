@@ -36,9 +36,9 @@ class Error(Exception):
         return cls(
             e.code,
             n.decode(n.lib.cf_code_name(e.code)),
-            n.decode(e.key),
-            n.decode(e.source),
-            n.decode(e.message),
+            n.error_text(e.key),
+            n.error_text(e.source),
+            n.error_text(e.message),
             reason=n.decode(name_of(e.reason)) if e.reason and name_of else "",
             line=e.where_line,
             column=e.where_col,

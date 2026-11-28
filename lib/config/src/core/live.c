@@ -277,6 +277,7 @@ static cf_config* live_build(cf_live* l, const cf_config* running, char** list,
                              "the check refused the new configuration");
             }
             cf_error_copy(err, &mine);
+            cf_error_clear(&mine);
             live_release(l, *list);
             *list     = NULL;
             *list_len = 0;
@@ -594,8 +595,10 @@ static cf_live_result live_probation(cf_live* l, cf_error* err) {
         cf_bool    ok  = l->health(l->health_user, c, &why);
         cf_config_free(c);
         if (!ok) {
-            return live_rollback(l, why.message[0] != '\0' ? why.message : "unhealthy",
-                                 err);
+            cf_live_result r = live_rollback(
+                l, why.message[0] != '\0' ? why.message : "unhealthy", err);
+            cf_error_clear(&why);
+            return r;
         }
     }
     if (l->left > 0) {
@@ -739,6 +742,8 @@ void cf_live_close(cf_live* l) {
     }
     live_drop_pending(l);
     live_drop_kept(l);
+    cf_error_clear(&l->last_error);
+    cf_error_clear(&l->scratch);
     cf_config_free(l->rejected);
     cf_watcher_close(l->watcher);
     cf_config_free(l->current);

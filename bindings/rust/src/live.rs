@@ -142,14 +142,16 @@ extern "C" fn health_trampoline(
         Ok(Err(reason)) => reason,
         Err(_) => "the health function panicked".to_string(),
     };
-    // 1.0's fields are always the caller's; cf_error_set is variadic.
+    // 1.0's fields are always the caller's; cf_error_set is variadic. The
+    // text goes into the inline store and `message` points at it.
     let e = unsafe { &mut *err };
     e.code = sys::CF_E_POLICY;
-    let n = reason.len().min(e.message.len() - 1);
-    for (d, s) in e.message.iter_mut().zip(reason.as_bytes()[..n].iter()) {
+    let n = reason.len().min(e.cfi_message.len() - 1);
+    for (d, s) in e.cfi_message.iter_mut().zip(reason.as_bytes()[..n].iter()) {
         *d = *s as std::os::raw::c_char;
     }
-    e.message[n] = 0;
+    e.cfi_message[n] = 0;
+    e.message = e.cfi_message.as_ptr();
     0
 }
 

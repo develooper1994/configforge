@@ -98,8 +98,8 @@ static void test_fixed(void) {
     cf_error err = CF_ERROR_INIT;
 
     same("CF_SOURCE_MAX", (long)CF_SOURCE_MAX);
-    check(sizeof(err.source) == (size_t)CF_SOURCE_MAX,
-          "limits: CF_SOURCE_MAX is the size of cf_error's source");
+    check(sizeof(err.cfi_source) == (size_t)CF_SOURCE_MAX,
+          "limits: CF_SOURCE_MAX is the size of cf_error's inline source");
     same("CF_MAX_SOURCES", (long)CF_MAX_SOURCES);
     same("CF_MAX_OPEN_PREFIXES", (long)CF_MAX_OPEN_PREFIXES);
     same("CF_EXPAND_MAX", (long)CF_EXPAND_MAX);

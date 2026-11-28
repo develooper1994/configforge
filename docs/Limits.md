@@ -46,7 +46,7 @@ These are the options of "Limits and the stack budget" in the [README](../README
 | `CF_MAX_DEPTH` | 32 | 4 to 1024 | deepest nesting in the configuration layer, counting the document as the first level (see the depth rule below) |
 | `CF_STACK_BUDGET` | 2048 | 0 to 1048576 | bytes a library function's stack frame may take; `0` measures without checking |
 
-`CF_KEY_MAX`, `CF_MESSAGE_MAX` and `CF_SOURCE_MAX` size `cf_error`'s buffers and so belong to a build's ABI (D-45): `cf_build_limit()` says which numbers a library was built with.
+`CF_KEY_MAX`, `CF_MESSAGE_MAX` and `CF_SOURCE_MAX` size `cf_error`'s inline text store and so belong to a build's ABI (D-45): `cf_build_limit()` says which numbers a library was built with. A text past the store lives in a block the error owns (D-176): `cf_error_set` still cuts at these limits and `cf_error_set_long` does not.
 
 <!-- limits:2:end -->
 

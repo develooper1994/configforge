@@ -78,6 +78,9 @@ static void test_size(void) {
     cf_error_place(e, reason, 3, 4);
     check_tail(bytes, old_size, sizeof buffer);
 
+    /* A struct that grows its size says its blocks are empty: they are
+       read where `size` reaches them, and nothing wrote them before. */
+    memset(e->cfi_heap, 0, sizeof e->cfi_heap);
     e->size = sizeof *e;
     cf_error_set(e, CF_E_SOURCE, "a", "doc", "refused");
     cf_error_place(e, reason, 3, 4);

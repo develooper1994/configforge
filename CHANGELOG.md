@@ -7,6 +7,7 @@ nothing: the C interface is not frozen, and a minor bump may change it.
 
 ### Added
 
+- `cf_error_set_long`: as `cf_error_set`, with each of the three texts allowed a cap of bytes (0, none) and a text past the old arrays' size held in a block the error owns (M-11b, D-176).
 - An allocator that refuses the nth allocation, swept over every load and write path (`tests/support/cf_oom.h`), and `gate.oom`, which refuses a public load or write function with no sweep case or excuse; `cf_file_options` gains `allocator` (K-9b, D-237).
 - `cf_error.offset` and `cf_error_place_at` (experimental in 2.0): a refusal's byte offset,
   as a number, in the JSON, JSON5, TOML, YAML, INI, properties, XML, CBOR and TLV readers;
@@ -33,6 +34,7 @@ nothing: the C interface is not frozen, and a minor bump may change it.
 
 ### Changed
 
+- `cf_error`'s `key`, `source` and `message` are owned text, not arrays (D-176): they are `const char*`, "" when unset, held in an inline store the size of the old arrays and, when a text does not fit, in a block the error owns and `cf_error_clear` frees. `cf_error_set` cuts as it always did; the new `cf_error_set_long` keeps a text up to a cap. A `cf_error` is never copied by value (use `cf_error_copy`); the C++ `Error` copies and frees correctly, and the Rust and Python bindings read the pointers (M-11b).
 - `cf_reason_severity` and `cf_reason_weakness`, experimental in 1.9, are promoted to
   `CF_API` and listed in `cmake/configforge.symbols` (D-89).
 - `configforge codec check`, `dump` and `recode`, when they refuse a file, print

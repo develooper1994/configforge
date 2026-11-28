@@ -108,9 +108,9 @@ impl Error {
         Error {
             code: e.code,
             name: text_of(unsafe { sys::cf_code_name(e.code) }),
-            key: text_of(e.key.as_ptr()),
-            source: text_of(e.source.as_ptr()),
-            message: text_of(e.message.as_ptr()),
+            key: text_of(e.key),
+            source: text_of(e.source),
+            message: text_of(e.message),
             reason: if e.reason == 0 {
                 String::new()
             } else {
@@ -174,9 +174,12 @@ fn new_error() -> sys::cf_error {
     sys::cf_error {
         size: std::mem::size_of::<sys::cf_error>(),
         code: 0,
-        key: [0; sys::CF_KEY_MAX],
-        source: [0; sys::CF_SOURCE_MAX],
-        message: [0; sys::CF_MESSAGE_MAX],
+        key: std::ptr::null(),
+        source: std::ptr::null(),
+        message: std::ptr::null(),
+        cfi_key: [0; sys::CF_KEY_MAX],
+        cfi_source: [0; sys::CF_SOURCE_MAX],
+        cfi_message: [0; sys::CF_MESSAGE_MAX],
         where_: sys::cf_loc { file: std::ptr::null(), line: 0, col: 0 },
         reason: 0,
     }

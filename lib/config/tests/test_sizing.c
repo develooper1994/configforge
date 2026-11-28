@@ -287,8 +287,7 @@ static size_t sz_doc(char* out, const char* format, size_t klen, size_t vlen) {
 }
 
 static void sz_fresh(cf_error* e) {
-    cf_error fresh = CF_ERROR_INIT;
-    *e             = fresh;
+    cf_error_clear(e);
 }
 
 /* "<format>: <text>" in `out`, which holds 96 bytes. */
@@ -380,10 +379,128 @@ static void sz_readers(void) {
 
 #endif
 
+/* ------------------------------------------------------------------ *
+ * M-11b: cf_error owns its text (D-176).
+ * ------------------------------------------------------------------ */
+
+enum { SZ_LONG = 3000, SZ_LONG_KEY = 600 };
+
+static int sz_inside(const cf_error* e, const char* p) {
+    return p >= (const char*)e && p < (const char*)e + sizeof *e;
+}
+
+static void sz_error_cut(void) {
+    static char big[SZ_LONG + 1];
+    static char key[SZ_LONG_KEY + 1];
+    cf_error    e = CF_ERROR_INIT;
+
+    memset(big, 'm', SZ_LONG);
+    memset(key, 'k', SZ_LONG_KEY);
+
+    /* cf_error_set is what it was: cut at the old arrays' sizes, inline. */
+    cf_error_set(&e, CF_E_SOURCE, key, "src", "%s", big);
+    check(strlen(e.message) == (size_t)CF_MESSAGE_MAX - 1u,
+          "cf_error_set cuts a 3000-byte message at CF_MESSAGE_MAX - 1");
+    check(strlen(e.key) == (size_t)CF_KEY_MAX - 1u,
+          "cf_error_set cuts a 600-byte key at CF_KEY_MAX - 1");
+    check(sz_inside(&e, e.message) && sz_inside(&e, e.key) && sz_inside(&e, e.source),
+          "and keeps all three texts in the error's own store");
+    check(strcmp(e.source, "src") == 0, "a short source is whole");
+    cf_error_clear(&e);
+    check(e.key != NULL && e.source != NULL && e.message != NULL && e.key[0] == '\0' &&
+              e.source[0] == '\0' && e.message[0] == '\0',
+          "a cleared error has empty texts, never NULL");
+
+    /* A struct of zeros has NULL pointers until its first use, and works. */
+    memset(&e, 0, sizeof e);
+    cf_error_set(&e, CF_E_SOURCE, "a.b", NULL, "%s", "x");
+    check(strcmp(e.key, "a.b") == 0 && e.source[0] == '\0' &&
+              strcmp(e.message, "x") == 0,
+          "a zeroed error takes a set");
+    cf_error_clear(&e);
+}
+
+#if !CF_FIXED_LIMITS
+static void sz_error_long(void) {
+    static char big[SZ_LONG + 1];
+    static char key[SZ_LONG_KEY + 1];
+    cf_error    a = CF_ERROR_INIT;
+    cf_error    b = CF_ERROR_INIT;
+
+    memset(big, 'm', SZ_LONG);
+    memset(key, 'k', SZ_LONG_KEY);
+
+    cf_error_set_long(&a, CF_E_SOURCE, key, "src", 0, "%s", big);
+    check(a.code == CF_E_SOURCE, "cf_error_set_long sets the code");
+    check(strlen(a.message) == (size_t)SZ_LONG && memcmp(a.message, big, SZ_LONG) == 0,
+          "a 3000-byte message is whole under cap 0");
+    check(strlen(a.key) == (size_t)SZ_LONG_KEY && memcmp(a.key, key, SZ_LONG_KEY) == 0,
+          "a 600-byte key is whole under cap 0");
+    check(!sz_inside(&a, a.message) && !sz_inside(&a, a.key),
+          "a text past the store lives in a block of its own");
+    check(strcmp(a.source, "src") == 0 && sz_inside(&a, a.source),
+          "a short source stays in the store");
+
+    cf_error_copy(&b, &a);
+    check(strlen(b.message) == (size_t)SZ_LONG &&
+              memcmp(b.message, big, SZ_LONG) == 0 &&
+              strlen(b.key) == (size_t)SZ_LONG_KEY && strcmp(b.source, "src") == 0,
+          "cf_error_copy keeps the long texts whole");
+    check(b.message != a.message && b.key != a.key && b.source != a.source,
+          "the copy's texts are its own");
+    check(!sz_inside(&a, b.message) && !sz_inside(&a, b.key) &&
+              !sz_inside(&a, b.source),
+          "no pointer of the copy points into the source");
+
+    cf_error_clear(&a);
+    check(a.message[0] == '\0' && a.key[0] == '\0' && a.code == CF_OK &&
+              a.cfi_heap[0] == NULL && a.cfi_heap[1] == NULL && a.cfi_heap[2] == NULL,
+          "cf_error_clear empties the texts and drops the blocks");
+    check(strlen(b.message) == (size_t)SZ_LONG && memcmp(b.message, big, SZ_LONG) == 0,
+          "and the copy is not touched");
+    cf_error_clear(&b);
+
+    /* A cap holds the text to it; a short text takes no block. */
+    cf_error_set_long(&a, CF_E_SOURCE, key, "src", 1000, "%s", big);
+    check(strlen(a.message) == 1000u && strlen(a.key) == (size_t)SZ_LONG_KEY,
+          "a cap of 1000 cuts the message and keeps the 600-byte key");
+    cf_error_set_long(&a, CF_E_SOURCE, key, "src", 100, "%s", big);
+    check(strlen(a.message) == 100u && strlen(a.key) == 100u,
+          "a cap of 100 cuts both, over the old arrays' size");
+    cf_error_set_long(&a, CF_E_SOURCE, "a.b", NULL, 0, "%s %d", "short", 7);
+    check(strcmp(a.message, "short 7") == 0 && sz_inside(&a, a.message) &&
+              a.cfi_heap[2] == NULL,
+          "a short message is inline and a second set released the first block");
+    cf_error_clear(&a);
+
+    /* A set on top of a long text, from that text. */
+    cf_error_set_long(&a, CF_E_SOURCE, NULL, NULL, 0, "%s", big);
+    cf_error_set_long(&a, CF_E_SOURCE, NULL, NULL, 0, "%s%s", a.message, "!");
+    check(strlen(a.message) == (size_t)SZ_LONG + 1u && a.message[SZ_LONG] == '!',
+          "a long message can be built from the one it replaces");
+    cf_error_clear(&a);
+}
+#endif
+
+static void sz_error_fixed(void) {
+#if CF_FIXED_LIMITS
+    static char big[SZ_LONG + 1];
+    cf_error    e = CF_ERROR_INIT;
+
+    memset(big, 'm', SZ_LONG);
+    cf_error_set_long(&e, CF_E_SOURCE, NULL, NULL, 0, "%s", big);
+    check(strlen(e.message) == (size_t)CF_MESSAGE_MAX - 1u && e.cfi_heap[2] == NULL,
+          "a build with fixed limits never allocates: cf_error_set_long cuts");
+    cf_error_clear(&e);
+#endif
+}
+
 int main(void) {
     sz_init();
     sz_default();
     sz_refused_args();
+    sz_error_cut();
+    sz_error_fixed();
 #if CF_FIXED_LIMITS
     sz_fixed();
 #else
@@ -391,6 +508,7 @@ int main(void) {
     sz_semi_needs_cap();
     sz_derived();
     sz_readers();
+    sz_error_long();
 #endif
     return cf_test_done();
 }

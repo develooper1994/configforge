@@ -119,7 +119,9 @@ class Live:
         # cannot call portably. 1.0's fields are always the caller's.
         e = ctypes.cast(err, ctypes.POINTER(n.cf_error)).contents
         e.code = n.E_POLICY
-        e.message = n.encode(reason)[: n.MESSAGE_MAX - 1]
+        # The text goes into the inline store and `message` points at it.
+        e.store_message = n.encode(reason)[: n.MESSAGE_MAX - 1]
+        e.message = ctypes.addressof(e) + n.cf_error.store_message.offset
         return 0
 
     def _error(self, e: n.cf_error) -> Error:

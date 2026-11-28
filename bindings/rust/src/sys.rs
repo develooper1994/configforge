@@ -63,9 +63,16 @@ pub struct cf_loc {
 pub struct cf_error {
     pub size: usize,
     pub code: c_int,
-    pub key: [c_char; CF_KEY_MAX],
-    pub source: [c_char; CF_SOURCE_MAX],
-    pub message: [c_char; CF_MESSAGE_MAX],
+    // The texts are owned by the error (D-176): pointers, "" or NULL when
+    // unset, into the inline store behind them. This struct ends at `reason`,
+    // so its `size` does not reach the library's blocks for long texts: every
+    // text here is inline and cut at the store's size, as it always was.
+    pub key: *const c_char,
+    pub source: *const c_char,
+    pub message: *const c_char,
+    pub cfi_key: [c_char; CF_KEY_MAX],
+    pub cfi_source: [c_char; CF_SOURCE_MAX],
+    pub cfi_message: [c_char; CF_MESSAGE_MAX],
     pub where_: cf_loc,
     pub reason: c_int,
 }

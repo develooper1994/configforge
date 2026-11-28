@@ -3,11 +3,11 @@
 # scripts/check/eva.cmake fails on an alarm not listed here and on an
 # entry no alarm matches.
 
-# cf_error_set formats into tmp with cf_vfmt and copies it with copy_bounded
+# cf_error_set formats into tmp with cf_vfmt and measures it with text_len
 # (strlen). cf_vfmt writes the terminator at min(len, cap - 1) with every
 # earlier byte written; EVA's loop abstraction in cf_vformat cannot carry that
 # to the strlen. With a fixed format (no conversion) the alarm is absent.
-lib/base/src/error.c copy_bounded precondition_of_strlen
+lib/base/src/error.c text_len precondition_of_strlen
 
 # cf_wipe calls memset through a volatile function pointer (so that the
 # compiler cannot drop the wipe, alloc.c:185-200). EVA cannot resolve a
